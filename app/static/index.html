@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanal Klonlayıcı</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --text: #1d1d1b; --muted: #6b6a66; --line: #e4e2dc;
+    --accent: #d9432b; --accent-2: #b53420; --ok: #2f7d4f; --code: #f1efea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151514; --card: #1e1e1c; --text: #ecebe7; --muted: #9c9a94; --line: #33322f;
+            --accent: #ef6a4f; --accent-2: #f2856e; --ok: #5cb883; --code: #262624; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 0 0 6px; }
+  input, select { width: 100%; padding: 12px 14px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px;
+                  background: var(--bg); color: var(--text); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  button, .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 10px; cursor: pointer;
+                 padding: 12px 20px; font-size: 15px; font-weight: 600; background: var(--accent); color: #fff; text-decoration: none; }
+  button:hover, .btn:hover { background: var(--accent-2); }
+  button:disabled { opacity: .5; cursor: default; }
+  .btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .actions { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 14px 0 8px; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .6s; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .error { color: var(--accent); font-weight: 600; }
+  .hidden { display: none !important; }
+  .channel { display: flex; gap: 14px; align-items: center; }
+  .channel img { width: 56px; height: 56px; border-radius: 50%; }
+  .videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 16px; }
+  .videos a { color: inherit; text-decoration: none; font-size: 13px; }
+  .videos img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 6px; }
+  .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+  .tabs button { background: transparent; color: var(--muted); border-radius: 8px 8px 0 0; padding: 10px 14px; white-space: nowrap; }
+  .tabs button.active { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+  .md { overflow-wrap: anywhere; }
+  .md pre, .md code { background: var(--code); border-radius: 6px; }
+  .md pre { padding: 12px; overflow-x: auto; }
+  .md code { padding: 1px 4px; }
+  .md table { border-collapse: collapse; display: block; overflow-x: auto; }
+  .md th, .md td { border: 1px solid var(--line); padding: 6px 10px; }
+  .steps { margin: 0; padding-left: 20px; }
+  .steps li { margin-bottom: 6px; }
+  .warn { background: var(--code); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 6px; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kanal Klonlayıcı</h1>
+  <p class="sub">Başarılı bir YouTube kanalının linkini gir. En çok izlenen videoları script, hook, kurgu, başlık ve thumbnail
+    açısından analiz edelim ve sana bu kanalı Claude ile birebir kurman için hazır bir <b>Claude Projesi paketi</b> verelim.</p>
+
+  <form id="form" class="card">
+    <label for="url">Kanal linki</label>
+    <input id="url" name="url" required placeholder="https://www.youtube.com/@kanaladi">
+    <div class="row">
+      <div>
+        <label for="video_type">Analiz edilecek videolar</label>
+        <select id="video_type" name="video_type">
+          <option value="long">Uzun videolar</option>
+          <option value="shorts">Shorts</option>
+          <option value="all">Hepsi</option>
+        </select>
+      </div>
+      <div>
+        <label for="language">Senin kanalının içerik dili</label>
+        <select id="language" name="language">
+          <option value="">Analiz edilen kanalla aynı</option>
+          <option value="tr">Türkçe</option>
+          <option value="en">İngilizce</option>
+          <option value="de">Almanca</option>
+          <option value="es">İspanyolca</option>
+          <option value="fr">Fransızca</option>
+          <option value="pt">Portekizce</option>
+          <option value="ar">Arapça</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" id="accessRow">
+      <div>
+        <label for="access_code">Erişim kodu</label>
+        <input id="access_code" name="access_code" type="password" autocomplete="off">
+      </div>
+    </div>
+    <div class="actions"><button id="submit" type="submit">Kanalı analiz et</button></div>
+  </form>
+
+  <section id="progress" class="card hidden">
+    <b id="progressTitle">Analiz sürüyor</b>
+    <div class="bar"><div id="barFill"></div></div>
+    <div id="progressMsg" class="muted"></div>
+    <p class="muted">Bu işlem kanal büyüklüğüne göre 5-15 dakika sürebilir. Sayfayı kapatsan bile analiz devam eder;
+      bu sayfanın linkini saklarsan sonra geri dönebilirsin.</p>
+  </section>
+
+  <section id="result" class="hidden">
+    <div class="card">
+      <div class="channel">
+        <img id="chAvatar" alt="">
+        <div>
+          <div style="font-size:20px;font-weight:700" id="chTitle"></div>
+          <div class="muted" id="chStats"></div>
+        </div>
+      </div>
+      <div class="videos" id="videos"></div>
+      <div id="missing" class="warn hidden" style="margin-top:14px"></div>
+      <div class="actions">
+        <a class="btn" id="download" href="#">Claude Proje paketini indir (.zip)</a>
+        <button class="btn secondary" id="copyBtn" type="button">Proje talimatını kopyala</button>
+        <button class="btn secondary" id="newBtn" type="button">Yeni analiz</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>Claude'da kurulum (5 dakika)</b>
+      <ol class="steps">
+        <li>claude.ai → <b>Projects</b> → <b>Create project</b>.</li>
+        <li><b>Instructions</b> alanına "Proje Talimatı" sekmesindeki metnin tamamını yapıştır.</li>
+        <li>ZIP içindeki <code>.md</code> dosyalarını ve <code>thumbnails</code> klasöründeki görselleri <b>Project knowledge</b> alanına yükle.</li>
+        <li>Projede yeni sohbet aç, <b>"Merhaba, başlayalım"</b> yaz: Claude sana 5 fikirle başlayacak.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="active" data-tab="instructions">Proje Talimatı</button>
+        <button data-tab="dna_report">Kanal DNA Raporu</button>
+        <button data-tab="video_analyses">Video Analizleri</button>
+      </div>
+      <div id="tabContent" class="md"></div>
+    </div>
+  </section>
+
+  <section id="errorBox" class="card hidden">
+    <div class="error" id="errorMsg"></div>
+    <div class="actions"><button class="btn secondary" type="button" onclick="reset()">Tekrar dene</button></div>
+  </section>
+</main>
+
+<script>
+const ACCESS_REQUIRED = __ACCESS_REQUIRED__;
+const $ = (id) => document.getElementById(id);
+let result = null, activeTab = "instructions";
+
+if (!ACCESS_REQUIRED) $("accessRow").classList.add("hidden");
+try { const c = localStorage.getItem("access_code"); if (c) $("access_code").value = c; } catch (e) {}
+
+function show(id) {
+  for (const s of ["form", "progress", "result", "errorBox"]) $(s).classList.toggle("hidden", s !== id);
+}
+function reset() { history.replaceState(null, "", "/"); result = null; show("form"); $("submit").disabled = false; }
+$("newBtn").onclick = reset;
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("submit").disabled = true;
+  const fd = new FormData($("form"));
+  try { localStorage.setItem("access_code", fd.get("access_code") || ""); } catch (e) {}
+  const r = await fetch("/api/analyze", { method: "POST", body: fd });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { $("submit").disabled = false; return fail(data.detail || "İstek başarısız."); }
+  history.replaceState(null, "", "?job=" + data.job_id);
+  poll(data.job_id);
+});
+
+function fail(msg) { $("errorMsg").textContent = msg; show("errorBox"); }
+
+async function poll(jobId) {
+  show("progress");
+  while (true) {
+    const r = await fetch("/api/jobs/" + jobId);
+    if (!r.ok) return fail("Analiz bulunamadı.");
+    const s = await r.json();
+    $("barFill").style.width = (s.percent || 2) + "%";
+    $("progressMsg").textContent = s.message || "";
+    if (s.status === "done") return loadResult(jobId);
+    if (s.status === "error") return fail(s.message);
+    await new Promise((res) => setTimeout(res, 3000));
+  }
+}
+
+const fmt = (n) => new Intl.NumberFormat("tr-TR").format(n);
+
+async function loadResult(jobId) {
+  result = await (await fetch("/api/jobs/" + jobId + "/result")).json();
+  const ch = result.channel;
+  $("chAvatar").src = ch.avatar_url;
+  $("chTitle").textContent = ch.title;
+  $("chStats").textContent = `${fmt(ch.subscribers)} abone · ${fmt(ch.total_views)} izlenme · ${ch.video_count} video · Üretim dili: ${ch.language}`;
+  $("videos").innerHTML = "";
+  for (const v of result.top_videos) {
+    const a = document.createElement("a");
+    a.href = v.url; a.target = "_blank"; a.rel = "noopener";
+    const img = document.createElement("img"); img.src = v.thumbnail_url; img.alt = "";
+    const t = document.createElement("div"); t.textContent = v.title;
+    const m = document.createElement("div"); m.className = "muted"; m.textContent = `${fmt(v.views)} izlenme · ${v.duration}`;
+    a.append(img, t, m); $("videos").append(a);
+  }
+  if (result.missing_transcripts.length) {
+    $("missing").textContent = "Şu videoların transkripti alınamadı, analizleri başlık/açıklama/thumbnail üzerinden yapıldı: " + result.missing_transcripts.join(" · ");
+    $("missing").classList.remove("hidden");
+  } else $("missing").classList.add("hidden");
+  $("download").href = "/api/jobs/" + jobId + "/download";
+  renderTab();
+  show("result");
+}
+
+function renderTab() {
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === activeTab));
+  const html = marked.parse(result[activeTab] || "");
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  tpl.content.querySelectorAll("script,iframe,object,embed").forEach((n) => n.remove());
+  tpl.content.querySelectorAll("*").forEach((n) => [...n.attributes].forEach((a) => { if (a.name.startsWith("on")) n.removeAttribute(a.name); }));
+  $("tabContent").replaceChildren(tpl.content);
+}
+document.querySelectorAll(".tabs button").forEach((b) => (b.onclick = () => { activeTab = b.dataset.tab; renderTab(); }));
+
+$("copyBtn").onclick = async () => {
+  await navigator.clipboard.writeText(result.instructions);
+  $("copyBtn").textContent = "Kopyalandı ✓";
+  setTimeout(() => ($("copyBtn").textContent = "Proje talimatını kopyala"), 2000);
+};
+
+const jobParam = new URLSearchParams(location.search).get("job");
+if (jobParam) poll(jobParam);
+</script>
+</body>
+</html>
