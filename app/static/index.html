@@ -3,235 +3,666 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07070a">
 <title>Kanal Klonlayıcı</title>
-<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="/static/marked.min.js"></script>
 <style>
   :root {
-    --bg: #f6f5f2; --card: #ffffff; --text: #1d1d1b; --muted: #6b6a66; --line: #e4e2dc;
-    --accent: #d9432b; --accent-2: #b53420; --ok: #2f7d4f; --code: #f1efea;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #151514; --card: #1e1e1c; --text: #ecebe7; --muted: #9c9a94; --line: #33322f;
-            --accent: #ef6a4f; --accent-2: #f2856e; --ok: #5cb883; --code: #262624; }
+    --bg: #07070a;
+    --bg-2: #0d0d12;
+    --glass: rgba(255, 255, 255, 0.045);
+    --glass-strong: rgba(255, 255, 255, 0.07);
+    --stroke: rgba(255, 255, 255, 0.09);
+    --stroke-strong: rgba(255, 255, 255, 0.16);
+    --text: #f5f5f7;
+    --muted: #9a9aa6;
+    --faint: #62626e;
+    --red: #ff1f3d;
+    --red-2: #c3001d;
+    --red-soft: rgba(255, 31, 61, 0.14);
+    --red-glow: rgba(255, 31, 61, 0.45);
+    --ok: #3ddc97;
+    --radius: 20px;
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: "Sora", "Inter", system-ui, sans-serif;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
-  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em; }
-  .sub { color: var(--muted); margin: 0 0 28px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
-  label { display: block; font-weight: 600; font-size: 14px; margin: 0 0 6px; }
-  input, select { width: 100%; padding: 12px 14px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px;
-                  background: var(--bg); color: var(--text); }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
-  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
-  button, .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 10px; cursor: pointer;
-                 padding: 12px 20px; font-size: 15px; font-weight: 600; background: var(--accent); color: #fff; text-decoration: none; }
-  button:hover, .btn:hover { background: var(--accent-2); }
-  button:disabled { opacity: .5; cursor: default; }
-  .btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
-  .actions { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
-  .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 14px 0 8px; }
-  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .6s; }
-  .muted { color: var(--muted); font-size: 14px; }
-  .error { color: var(--accent); font-weight: 600; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+
+  /* ---------- Arka plan: kırmızı ışık lekeleri + ızgara ---------- */
+  .aurora { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+  .aurora span {
+    position: absolute; border-radius: 50%; filter: blur(110px); opacity: .55;
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  .aurora span:nth-child(1) { width: 620px; height: 620px; background: #ff1f3d; top: -260px; left: -180px; opacity: .38; }
+  .aurora span:nth-child(2) { width: 520px; height: 520px; background: #8a0015; top: 30%; right: -220px; animation-duration: 32s; }
+  .aurora span:nth-child(3) { width: 460px; height: 460px; background: #ff4d2e; bottom: -260px; left: 25%; opacity: .22; animation-duration: 38s; }
+  @keyframes drift { to { transform: translate3d(80px, 60px, 0) scale(1.12); } }
+  .grid {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  }
+  @media (prefers-reduced-motion: reduce) { .aurora span { animation: none; } }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 28px 16px 140px; }
+
+  /* ---------- Üst bar ---------- */
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; font: 700 16px var(--display); letter-spacing: -.01em; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--red), var(--red-2)); box-shadow: 0 6px 24px var(--red-glow);
+  }
+  .logo svg { width: 16px; height: 16px; fill: #fff; margin-left: 2px; }
+  .privacy {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted);
+    padding: 7px 12px; border-radius: 99px; background: var(--glass); border: 1px solid var(--stroke);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); white-space: nowrap;
+  }
+  @media (max-width: 480px) { .privacy span { display: none; } .privacy { padding: 9px; } }
+  .privacy i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+
+  /* ---------- Hero ---------- */
+  .hero { text-align: center; margin-bottom: 44px; }
+  .eyebrow {
+    display: inline-flex; gap: 8px; align-items: center; padding: 6px 14px; border-radius: 99px;
+    font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #ff8a9b;
+    background: var(--red-soft); border: 1px solid rgba(255, 31, 61, .28);
+  }
+  h1 {
+    font: 800 clamp(36px, 6.4vw, 64px)/1.04 var(--display); letter-spacing: -.035em; margin: 20px 0 16px;
+  }
+  h1 em {
+    font-style: normal; background: linear-gradient(100deg, #ff5a6e 0%, var(--red) 40%, #ff8a3d 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lead { max-width: 640px; margin: 0 auto; color: var(--muted); font-size: 16.5px; }
+
+  .steps {
+    display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 32px 0 0; padding: 0; list-style: none;
+  }
+  .steps li {
+    display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+    padding: 8px 14px 8px 8px; border-radius: 99px; background: var(--glass); border: 1px solid var(--stroke);
+  }
+  .steps b {
+    width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px;
+    background: rgba(255,255,255,.08); color: var(--text);
+  }
+  .steps li.on { color: var(--text); border-color: rgba(255,31,61,.4); }
+  .steps li.on b { background: var(--red); box-shadow: 0 0 14px var(--red-glow); }
+
+  /* ---------- Glass kart ---------- */
+  .glass {
+    position: relative; background: linear-gradient(180deg, var(--glass-strong), var(--glass));
+    border: 1px solid var(--stroke); border-radius: var(--radius);
+    backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
+    box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 30px 60px -30px rgba(0,0,0,.8);
+  }
+  .glass::before {
+    content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(140deg, rgba(255,31,61,.55), transparent 35%, transparent 70%, rgba(255,255,255,.12));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; opacity: .7;
+  }
+  .section { padding: 28px; margin-bottom: 22px; }
+  .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  h2 { font: 700 20px/1.3 var(--display); letter-spacing: -.02em; margin: 0 0 4px; }
+  .hint { color: var(--muted); font-size: 13.5px; margin: 0; }
+  .tag {
+    flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 99px;
+    background: var(--red-soft); color: #ff8a9b; border: 1px solid rgba(255,31,61,.25);
+  }
+
+  /* ---------- Form öğeleri ---------- */
+  .fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .fields .full { grid-column: 1 / -1; }
+  @media (max-width: 720px) { .fields { grid-template-columns: 1fr; } .section { padding: 20px; } }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: #d6d6de; margin: 0 0 7px; letter-spacing: .01em; }
+  label small { color: var(--faint); font-weight: 500; }
+  input, select, textarea {
+    width: 100%; font: 15px/1.5 var(--font); color: var(--text); padding: 12px 14px; border-radius: 12px;
+    background: rgba(0,0,0,.35); border: 1px solid var(--stroke); outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  textarea { resize: vertical; min-height: 150px; font-size: 13.5px; line-height: 1.55; }
+  input::placeholder, textarea::placeholder { color: var(--faint); }
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(255,31,61,.6); background: rgba(0,0,0,.5); box-shadow: 0 0 0 4px rgba(255,31,61,.12);
+  }
+  select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+  select option { background: var(--bg-2); }
+  details > summary {
+    cursor: pointer; list-style: none; color: var(--muted); font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px; user-select: none;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before { content: "+"; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 6px; background: rgba(255,255,255,.07); }
+  details[open] > summary::before { content: "–"; }
+  details[open] > summary { margin-bottom: 14px; }
+
+  /* ---------- Video kartları ---------- */
+  .videos { display: grid; gap: 18px; }
+  .video { padding: 22px; transition: border-color .25s, transform .25s; }
+  .video.ready { border-color: rgba(255,31,61,.35); }
+  .video-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .num {
+    width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
+    font: 700 15px var(--display); background: rgba(255,255,255,.06); border: 1px solid var(--stroke);
+  }
+  .video.ready .num { background: linear-gradient(135deg, var(--red), var(--red-2)); border-color: transparent; box-shadow: 0 6px 20px var(--red-glow); }
+  .video-head h3 { margin: 0; font: 600 15.5px var(--display); flex: 1; }
+  .status { font-size: 12px; font-weight: 600; color: var(--faint); padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,.04); border: 1px solid var(--stroke); }
+  .video.ready .status { color: var(--ok); border-color: rgba(61,220,151,.3); background: rgba(61,220,151,.08); }
+  .video-body { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }
+  @media (max-width: 820px) { .video-body { grid-template-columns: 1fr; } }
+  .stack { display: grid; gap: 14px; align-content: start; }
+
+  .drop {
+    position: relative; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; cursor: pointer;
+    display: grid; place-items: center; text-align: center; padding: 12px;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0 10px, transparent 10px 20px), rgba(0,0,0,.3);
+    border: 1.5px dashed var(--stroke-strong); transition: border-color .2s, background-color .2s;
+  }
+  .drop:hover, .drop.over { border-color: var(--red); background-color: rgba(255,31,61,.06); }
+  .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .drop .ph { color: var(--muted); font-size: 12.5px; pointer-events: none; }
+  .drop .ph svg { width: 26px; height: 26px; stroke: var(--red); display: block; margin: 0 auto 6px; }
+  .drop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+  .drop .clear {
+    position: absolute; top: 8px; right: 8px; z-index: 2; width: 28px; height: 28px; border-radius: 8px; border: 0;
+    background: rgba(0,0,0,.7); color: #fff; cursor: pointer; font-size: 16px; line-height: 1; display: none;
+    backdrop-filter: blur(8px);
+  }
+  .drop.has .clear { display: block; }
+  .drop.has .ph { display: none; }
+
+  .transcript-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+  .file-btn {
+    position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    font-size: 12.5px; font-weight: 600; color: var(--text); padding: 7px 12px; border-radius: 10px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--stroke); transition: border-color .2s;
+  }
+  .file-btn:hover { border-color: var(--red); }
+  .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .count { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .tip {
+    margin-top: 16px; padding: 14px 16px; border-radius: 14px; font-size: 13px; color: var(--muted);
+    background: rgba(255,31,61,.06); border: 1px solid rgba(255,31,61,.18); overflow-wrap: anywhere;
+  }
+  .tip b { color: var(--text); }
+
+  /* ---------- Butonlar ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px; cursor: pointer; text-decoration: none;
+    font: 600 15px var(--display); letter-spacing: -.01em; color: #fff; padding: 14px 26px; border-radius: 14px; border: 0;
+    background: linear-gradient(135deg, #ff3350, var(--red-2));
+    box-shadow: 0 10px 30px -8px var(--red-glow), inset 0 1px 0 rgba(255,255,255,.25);
+    transition: transform .15s, box-shadow .2s, opacity .2s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 16px 40px -10px var(--red-glow), inset 0 1px 0 rgba(255,255,255,.3); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn.ghost { background: rgba(255,255,255,.06); border: 1px solid var(--stroke-strong); box-shadow: none; }
+  .btn.ghost:hover { border-color: rgba(255,31,61,.6); }
+  .btn svg { width: 17px; height: 17px; }
+
+  .dock {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20;
+    width: min(1048px, calc(100% - 32px)); padding: 12px 12px 12px 22px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; border-radius: 20px;
+  }
+  .dock .meter { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); }
+  .dots { display: flex; gap: 5px; }
+  .dots i { width: 22px; height: 6px; border-radius: 99px; background: rgba(255,255,255,.1); transition: background .3s, box-shadow .3s; }
+  .dots i.on { background: var(--red); box-shadow: 0 0 10px var(--red-glow); }
+  @media (max-width: 560px) { .dock .dots { display: none; } .dock .btn { padding: 13px 18px; } }
+
+  /* ---------- İlerleme ---------- */
+  .progress-wrap { max-width: 640px; margin: 20px auto; padding: 40px 32px; text-align: center; }
+  .ring { width: 132px; height: 132px; margin: 0 auto 22px; position: relative; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 7; }
+  .ring .track { stroke: rgba(255,255,255,.07); }
+  .ring .val { stroke: var(--red); stroke-linecap: round; stroke-dasharray: 364.4; stroke-dashoffset: 364.4; transition: stroke-dashoffset .8s ease; filter: drop-shadow(0 0 8px var(--red-glow)); }
+  .ring span { position: absolute; inset: 0; display: grid; place-items: center; font: 700 28px var(--display); }
+  .phases { list-style: none; padding: 0; margin: 26px 0 0; text-align: left; display: grid; gap: 10px; }
+  .phases li { display: flex; gap: 12px; align-items: center; font-size: 14px; color: var(--faint); }
+  .phases li i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--stroke-strong); flex-shrink: 0; display: grid; place-items: center; font-style: normal; font-size: 11px; }
+  .phases li.active { color: var(--text); }
+  .phases li.active i { border-color: var(--red); box-shadow: 0 0 0 4px rgba(255,31,61,.15); animation: pulse 1.4s infinite; }
+  .phases li.done { color: var(--muted); }
+  .phases li.done i { background: var(--red); border-color: var(--red); color: #fff; }
+  .phases li.done i::after { content: "✓"; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(255,31,61,0); } }
+
+  /* ---------- Sonuç ---------- */
+  .result-head { padding: 28px; display: flex; gap: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 22px; }
+  .result-head h2 { font-size: 26px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .chip { font-size: 12px; color: var(--muted); padding: 5px 10px; border-radius: 99px; background: rgba(255,255,255,.05); border: 1px solid var(--stroke); }
+  .setup { padding: 24px 28px; margin-bottom: 22px; }
+  .setup ol { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 820px) { .setup ol { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .setup ol { grid-template-columns: 1fr; } }
+  .setup li { counter-increment: s; padding: 16px; border-radius: 14px; background: rgba(0,0,0,.28); border: 1px solid var(--stroke); font-size: 13.5px; color: var(--muted); }
+  .setup li::before { content: "0" counter(s); display: block; font: 700 13px var(--display); color: var(--red); margin-bottom: 6px; }
+  .setup li b { color: var(--text); }
+  .tabs { display: flex; gap: 6px; padding: 6px; border-radius: 14px; background: rgba(0,0,0,.35); border: 1px solid var(--stroke); width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 22px; }
+  .tabs button { border: 0; cursor: pointer; font: 600 13.5px var(--font); color: var(--muted); padding: 9px 16px; border-radius: 10px; background: transparent; white-space: nowrap; }
+  .tabs button.active { color: #fff; background: linear-gradient(135deg, #ff3350, var(--red-2)); box-shadow: 0 6px 18px -6px var(--red-glow); }
+  .doc { padding: 30px; }
+  .md { overflow-wrap: anywhere; color: #dcdce3; font-size: 14.5px; line-height: 1.7; }
+  .md h1, .md h2, .md h3, .md h4 { font-family: var(--display); color: var(--text); letter-spacing: -.02em; line-height: 1.3; }
+  .md h1 { font-size: 26px; margin: 8px 0 16px; }
+  .md h2 { font-size: 20px; margin: 30px 0 10px; padding-top: 18px; border-top: 1px solid var(--stroke); }
+  .md h3 { font-size: 16px; margin: 22px 0 8px; color: #ff8a9b; }
+  .md a { color: #ff6b80; }
+  .md strong { color: var(--text); }
+  .md code { font-size: 13px; background: rgba(255,255,255,.07); padding: 2px 6px; border-radius: 6px; }
+  .md pre { background: rgba(0,0,0,.45); border: 1px solid var(--stroke); padding: 14px; border-radius: 12px; overflow-x: auto; }
+  .md pre code { background: none; padding: 0; }
+  .md blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--red); background: rgba(255,31,61,.06); border-radius: 0 10px 10px 0; }
+  .md table { border-collapse: collapse; display: block; overflow-x: auto; margin: 12px 0; font-size: 13.5px; }
+  .md th, .md td { border: 1px solid var(--stroke); padding: 8px 12px; text-align: left; }
+  .md th { background: rgba(255,255,255,.05); color: var(--text); }
+  .md hr { border: 0; border-top: 1px solid var(--stroke); margin: 28px 0; }
+
+  .error-card { max-width: 640px; margin: 20px auto; padding: 32px; text-align: center; }
+  .error-card .icon { width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 16px; display: grid; place-items: center; background: var(--red-soft); color: var(--red); font: 800 24px var(--display); }
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translate(-50%, -140%); z-index: 50; padding: 12px 18px; border-radius: 14px;
+    font-size: 14px; font-weight: 500; transition: transform .35s cubic-bezier(.2,.9,.3,1.2), visibility .35s; max-width: calc(100% - 32px);
+    visibility: hidden;
+  }
+  .toast.show { transform: translate(-50%, 0); visibility: visible; }
   .hidden { display: none !important; }
-  .channel { display: flex; gap: 14px; align-items: center; }
-  .channel img { width: 56px; height: 56px; border-radius: 50%; }
-  .videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 16px; }
-  .videos a { color: inherit; text-decoration: none; font-size: 13px; }
-  .videos img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 6px; }
-  .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
-  .tabs button { background: transparent; color: var(--muted); border-radius: 8px 8px 0 0; padding: 10px 14px; white-space: nowrap; }
-  .tabs button.active { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
-  .md { overflow-wrap: anywhere; }
-  .md pre, .md code { background: var(--code); border-radius: 6px; }
-  .md pre { padding: 12px; overflow-x: auto; }
-  .md code { padding: 1px 4px; }
-  .md table { border-collapse: collapse; display: block; overflow-x: auto; }
-  .md th, .md td { border: 1px solid var(--line); padding: 6px 10px; }
-  .steps { margin: 0; padding-left: 20px; }
-  .steps li { margin-bottom: 6px; }
-  .warn { background: var(--code); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 6px; font-size: 14px; }
+  footer { text-align: center; color: var(--faint); font-size: 12.5px; margin-top: 40px; }
 </style>
 </head>
 <body>
+<div class="aurora"><span></span><span></span><span></span></div>
+<div class="grid"></div>
+<div id="toast" class="toast glass"></div>
+
 <main>
-  <h1>Kanal Klonlayıcı</h1>
-  <p class="sub">Başarılı bir YouTube kanalının linkini gir. En çok izlenen videoları script, hook, kurgu, başlık ve thumbnail
-    açısından analiz edelim ve sana bu kanalı Claude ile birebir kurman için hazır bir <b>Claude Projesi paketi</b> verelim.</p>
-
-  <form id="form" class="card">
-    <label for="url">Kanal linki</label>
-    <input id="url" name="url" required placeholder="https://www.youtube.com/@kanaladi">
-    <div class="row">
-      <div>
-        <label for="video_type">Analiz edilecek videolar</label>
-        <select id="video_type" name="video_type">
-          <option value="long">Uzun videolar</option>
-          <option value="shorts">Shorts</option>
-          <option value="all">Hepsi</option>
-        </select>
-      </div>
-      <div>
-        <label for="language">Senin kanalının içerik dili</label>
-        <select id="language" name="language">
-          <option value="">Analiz edilen kanalla aynı</option>
-          <option value="tr">Türkçe</option>
-          <option value="en">İngilizce</option>
-          <option value="de">Almanca</option>
-          <option value="es">İspanyolca</option>
-          <option value="fr">Fransızca</option>
-          <option value="pt">Portekizce</option>
-          <option value="ar">Arapça</option>
-        </select>
-      </div>
+  <nav class="nav">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      Kanal Klonlayıcı
     </div>
-    <div class="row" id="accessRow">
-      <div>
-        <label for="access_code">Erişim kodu</label>
-        <input id="access_code" name="access_code" type="password" autocomplete="off">
-      </div>
-    </div>
-    <div class="actions"><button id="submit" type="submit">Kanalı analiz et</button></div>
-  </form>
+    <div class="privacy" title="Verilerin kaydedilmez"><i></i><span>Verilerin kaydedilmez</span></div>
+  </nav>
 
-  <section id="progress" class="card hidden">
-    <b id="progressTitle">Analiz sürüyor</b>
-    <div class="bar"><div id="barFill"></div></div>
-    <div id="progressMsg" class="muted"></div>
-    <p class="muted">Bu işlem kanal büyüklüğüne göre 5-15 dakika sürebilir. Sayfayı kapatsan bile analiz devam eder;
-      bu sayfanın linkini saklarsan sonra geri dönebilirsin.</p>
-  </section>
+  <!-- ================= FORM ================= -->
+  <form id="form" novalidate>
+    <header class="hero">
+      <span class="eyebrow">Faceless kanal analiz sistemi</span>
+      <h1>Başarılı kanalı çöz,<br><em>formülünü Claude'a kur.</em></h1>
+      <p class="lead">En çok izlenen 5 videonun başlığını, transkriptini ve thumbnail'ını yükle. Hook'tan kurguya,
+        başlıktan SEO'ya kadar her şeyi analiz edip sana Claude Projesi'ne yükleyeceğin hazır bir sistem verelim.</p>
+      <ol class="steps">
+        <li class="on"><b>1</b>Kanal</li>
+        <li class="on"><b>2</b>5 video</li>
+        <li><b>3</b>Analiz</li>
+        <li><b>4</b>Claude paketi</li>
+      </ol>
+    </header>
 
-  <section id="result" class="hidden">
-    <div class="card">
-      <div class="channel">
-        <img id="chAvatar" alt="">
+    <section class="glass section">
+      <div class="section-head">
         <div>
-          <div style="font-size:20px;font-weight:700" id="chTitle"></div>
-          <div class="muted" id="chStats"></div>
+          <h2>Kanal bilgileri</h2>
+          <p class="hint">Analiz edeceğin kanalı tanıt. Link yalnızca referans için kullanılır.</p>
+        </div>
+        <span class="tag">Adım 1</span>
+      </div>
+      <div class="fields">
+        <div>
+          <label for="channel_url">Kanal linki</label>
+          <input id="channel_url" name="channel_url" placeholder="https://www.youtube.com/@kanaladi">
+        </div>
+        <div>
+          <label for="channel_name">Kanal adı</label>
+          <input id="channel_name" name="channel_name" placeholder="Örn. The Infographics Show">
+        </div>
+        <div>
+          <label for="language">Senin kanalının içerik dili</label>
+          <select id="language" name="language">
+            <option value="">Analiz edilen kanalla aynı</option>
+            <option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>İspanyolca</option>
+            <option>Fransızca</option><option>Portekizce</option><option>Arapça</option><option>Rusça</option>
+          </select>
+        </div>
+        <div id="accessWrap">
+          <label for="access_code">Erişim kodu</label>
+          <input id="access_code" name="access_code" type="password" autocomplete="off" placeholder="Eğitmeninden aldığın kod">
+        </div>
+        <div class="full">
+          <details>
+            <summary>Ek bilgiler (isteğe bağlı, analizi güçlendirir)</summary>
+            <div class="fields">
+              <div class="full">
+                <label for="other_titles">Kanalın diğer video başlıkları <small>— her satıra bir başlık</small></label>
+                <textarea id="other_titles" name="other_titles" style="min-height:110px" placeholder="Kanal sayfasındaki diğer popüler başlıkları buraya yapıştır. Başlık formüllerini daha iyi çıkarırız."></textarea>
+              </div>
+              <div class="full">
+                <label for="notes">Notların <small>— niş, hedef kitle, dikkat çekmek istediğin noktalar</small></label>
+                <textarea id="notes" name="notes" style="min-height:90px" placeholder="Örn. Kanal tarih belgeseli yapıyor, AI görsellerle anlatım var, 20-25 dk videolar…"></textarea>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
+    </section>
+
+    <section class="glass section">
+      <div class="section-head">
+        <div>
+          <h2>En çok izlenen 5 video</h2>
+          <p class="hint">Kanalın <b>Popüler</b> sekmesindeki ilk 5 videoyu sırayla gir. Başlık ve transkript zorunlu, thumbnail önerilir.</p>
+        </div>
+        <span class="tag">Adım 2</span>
+      </div>
       <div class="videos" id="videos"></div>
-      <div id="missing" class="warn hidden" style="margin-top:14px"></div>
+      <div class="tip">
+        <b>Transkripti nasıl alırım?</b> YouTube'da videonun açıklamasını aç → <b>…daha fazla</b> → <b>Transkripti göster</b> →
+        metnin tamamını seçip kopyala ve yapıştır (zaman damgalarıyla birlikte yapıştırman hook analizini güçlendirir).
+        <b>.txt, .srt</b> veya <b>.vtt</b> dosyası da yükleyebilirsin.<br>
+        <b>Thumbnail'ı nasıl alırım?</b> Video linkindeki <code>v=</code> sonrasındaki kodu al ve
+        <code>https://i.ytimg.com/vi/KOD/maxresdefault.jpg</code> adresini açıp görseli kaydet.
+      </div>
+    </section>
+
+    <div class="dock glass">
+      <div class="meter"><div class="dots" id="dots"></div><span id="readyText">0/5 video hazır</span></div>
+      <button class="btn" id="submit" type="submit" disabled>
+        Analizi başlat
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </form>
+
+  <!-- ================= İLERLEME ================= -->
+  <section id="progress" class="glass progress-wrap hidden">
+    <div class="ring">
+      <svg viewBox="0 0 128 128">
+        <circle class="track" cx="64" cy="64" r="58"/><circle class="val" id="ringVal" cx="64" cy="64" r="58"/></svg>
+      <span id="pct">0%</span>
+    </div>
+    <h2>Kanal analiz ediliyor</h2>
+    <p class="hint" id="progressMsg">Hazırlanıyor…</p>
+    <ul class="phases" id="phases">
+      <li data-at="0"><i></i>Videolar tek tek analiz ediliyor: hook, script yapısı, kurgu, thumbnail</li>
+      <li data-at="55"><i></i>Kanal DNA raporu çıkarılıyor</li>
+      <li data-at="80"><i></i>Claude Projesi talimatı yazılıyor</li>
+      <li data-at="95"><i></i>Paket hazırlanıyor</li>
+    </ul>
+    <p class="hint" style="margin-top:24px">Bu işlem 5-15 dakika sürebilir. Sekmeyi açık tut; bu sayfanın linkiyle de geri dönebilirsin.</p>
+  </section>
+
+  <!-- ================= SONUÇ ================= -->
+  <section id="result" class="hidden">
+    <div class="glass result-head">
+      <div>
+        <span class="eyebrow">Analiz tamamlandı</span>
+        <h2 id="resTitle" style="margin-top:12px"></h2>
+        <div class="chips" id="resChips"></div>
+      </div>
       <div class="actions">
-        <a class="btn" id="download" href="#">Claude Proje paketini indir (.zip)</a>
-        <button class="btn secondary" id="copyBtn" type="button">Proje talimatını kopyala</button>
-        <button class="btn secondary" id="newBtn" type="button">Yeni analiz</button>
+        <a class="btn" id="download" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+          Claude paketini indir
+        </a>
+        <button class="btn ghost" id="copyBtn" type="button">Talimatı kopyala</button>
+        <button class="btn ghost" id="newBtn" type="button">Yeni analiz</button>
       </div>
     </div>
 
-    <div class="card">
-      <b>Claude'da kurulum (5 dakika)</b>
-      <ol class="steps">
-        <li>claude.ai → <b>Projects</b> → <b>Create project</b>.</li>
+    <div class="glass setup">
+      <h2>Claude'da 5 dakikada kurulum</h2>
+      <ol>
+        <li><b>claude.ai → Projects → Create project</b> ile yeni proje aç.</li>
         <li><b>Instructions</b> alanına "Proje Talimatı" sekmesindeki metnin tamamını yapıştır.</li>
-        <li>ZIP içindeki <code>.md</code> dosyalarını ve <code>thumbnails</code> klasöründeki görselleri <b>Project knowledge</b> alanına yükle.</li>
-        <li>Projede yeni sohbet aç, <b>"Merhaba, başlayalım"</b> yaz: Claude sana 5 fikirle başlayacak.</li>
+        <li>ZIP'teki <b>.md dosyalarını</b> ve <b>thumbnail'ları</b> Project knowledge'a yükle.</li>
+        <li>Yeni sohbette <b>"Merhaba, başlayalım"</b> yaz. Claude 5 fikirle başlar.</li>
       </ol>
     </div>
 
-    <div class="card">
-      <div class="tabs">
-        <button class="active" data-tab="instructions">Proje Talimatı</button>
-        <button data-tab="dna_report">Kanal DNA Raporu</button>
-        <button data-tab="video_analyses">Video Analizleri</button>
-      </div>
-      <div id="tabContent" class="md"></div>
+    <div class="tabs" id="tabs">
+      <button class="active" data-tab="instructions">Proje Talimatı</button>
+      <button data-tab="dna_report">Kanal DNA Raporu</button>
+      <button data-tab="video_analyses">Video Analizleri</button>
+    </div>
+    <article class="glass doc"><div id="tabContent" class="md"></div></article>
+  </section>
+
+  <!-- ================= HATA ================= -->
+  <section id="errorBox" class="glass error-card hidden">
+    <div class="icon">!</div>
+    <h2>Bir sorun oluştu</h2>
+    <p class="hint" id="errorMsg"></p>
+    <div class="actions" style="justify-content:center;margin-top:20px">
+      <button class="btn ghost" type="button" id="retryBtn">Forma dön</button>
     </div>
   </section>
 
-  <section id="errorBox" class="card hidden">
-    <div class="error" id="errorMsg"></div>
-    <div class="actions"><button class="btn secondary" type="button" onclick="reset()">Tekrar dene</button></div>
-  </section>
+  <footer>Yüklediğin transkript ve görseller hiçbir yere kaydedilmez; sonuçlar kısa süre sonra otomatik silinir.</footer>
 </main>
 
 <script>
 const ACCESS_REQUIRED = __ACCESS_REQUIRED__;
+const VIDEO_COUNT = 5;
 const $ = (id) => document.getElementById(id);
 let result = null, activeTab = "instructions";
 
-if (!ACCESS_REQUIRED) $("accessRow").classList.add("hidden");
+if (!ACCESS_REQUIRED) $("accessWrap").classList.add("hidden");
 try { const c = localStorage.getItem("access_code"); if (c) $("access_code").value = c; } catch (e) {}
 
+/* ---------- Video kartlarını oluştur ---------- */
+const imgIcon = '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>';
+for (let i = 1; i <= VIDEO_COUNT; i++) {
+  const el = document.createElement("div");
+  el.className = "glass video";
+  el.dataset.i = i;
+  el.innerHTML = `
+    <div class="video-head">
+      <div class="num">${i}</div>
+      <h3>${i}. en çok izlenen video</h3>
+      <span class="status">Eksik</span>
+    </div>
+    <div class="video-body">
+      <div class="stack">
+        <div>
+          <label>Thumbnail</label>
+          <div class="drop">
+            <input type="file" name="thumbnail_${i}" accept="image/jpeg,image/png,image/webp,image/gif">
+            <div class="ph">${imgIcon}Sürükle bırak ya da tıkla<br><small>JPG, PNG, WEBP · 5 MB</small></div>
+            <button class="clear" type="button" aria-label="Görseli kaldır">×</button>
+          </div>
+        </div>
+        <div class="mini">
+          <div><label>İzlenme</label><input name="views_${i}" placeholder="2.4M"></div>
+          <div><label>Süre</label><input name="duration_${i}" placeholder="18:42"></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div><label>Video başlığı *</label><input name="title_${i}" placeholder="Videonun tam başlığı" maxlength="300"></div>
+        <div>
+          <label>Transkript *</label>
+          <textarea name="transcript_${i}" placeholder="Transkripti buraya yapıştır ya da dosya yükle…"></textarea>
+          <div class="transcript-bar">
+            <label class="file-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14"/></svg>
+              Dosya yükle (.txt, .srt, .vtt)
+              <input type="file" accept=".txt,.srt,.vtt,.sbv,text/plain">
+            </label>
+            <span class="count">0 kelime</span>
+          </div>
+        </div>
+        <details>
+          <summary>Video açıklaması (isteğe bağlı, SEO analizi için)</summary>
+          <textarea name="description_${i}" style="min-height:90px" placeholder="Videonun YouTube açıklamasını yapıştır"></textarea>
+        </details>
+      </div>
+    </div>`;
+  $("videos").append(el);
+  $("dots").append(document.createElement("i"));
+  wireVideo(el);
+}
+
+function wireVideo(el) {
+  const drop = el.querySelector(".drop"), thumb = drop.querySelector("input");
+  const ta = el.querySelector("textarea[name^=transcript]"), title = el.querySelector("input[name^=title]");
+  const count = el.querySelector(".count"), fileIn = el.querySelector(".file-btn input");
+
+  const setPreview = () => {
+    drop.querySelector("img")?.remove();
+    const f = thumb.files[0];
+    if (!f) { drop.classList.remove("has"); return refresh(); }
+    if (f.size > 5 * 1024 * 1024) { toast("Thumbnail 5 MB'tan büyük olamaz."); thumb.value = ""; return setPreview(); }
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(f); img.alt = "";
+    drop.prepend(img); drop.classList.add("has"); refresh();
+  };
+  thumb.addEventListener("change", setPreview);
+  drop.querySelector(".clear").addEventListener("click", (e) => { e.preventDefault(); thumb.value = ""; setPreview(); });
+  ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, () => drop.classList.remove("over")));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) { thumb.files = e.dataTransfer.files; setPreview(); }
+  });
+
+  fileIn.addEventListener("change", async () => {
+    const f = fileIn.files[0]; if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { toast("Transkript dosyası 2 MB'tan büyük olamaz."); fileIn.value = ""; return; }
+    ta.value = await f.text(); fileIn.value = ""; refresh();
+  });
+  ta.addEventListener("input", refresh);
+  title.addEventListener("input", refresh);
+
+  function refresh() {
+    const words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+    count.textContent = new Intl.NumberFormat("tr-TR").format(words) + " kelime";
+    const ready = title.value.trim() && words >= 50;
+    el.classList.toggle("ready", !!ready);
+    el.querySelector(".status").textContent = ready ? (thumb.files[0] ? "Hazır" : "Hazır · thumbnail yok") : "Eksik";
+    updateDock();
+  }
+}
+
+function updateDock() {
+  const cards = [...document.querySelectorAll(".video")];
+  const ready = cards.filter((c) => c.classList.contains("ready")).length;
+  [...$("dots").children].forEach((d, i) => d.classList.toggle("on", i < ready));
+  $("readyText").textContent = `${ready}/${VIDEO_COUNT} video hazır`;
+  $("submit").disabled = ready === 0;
+}
+
+/* ---------- Görünüm geçişleri ---------- */
 function show(id) {
   for (const s of ["form", "progress", "result", "errorBox"]) $(s).classList.toggle("hidden", s !== id);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
-function reset() { history.replaceState(null, "", "/"); result = null; show("form"); $("submit").disabled = false; }
-$("newBtn").onclick = reset;
+function toast(msg) {
+  $("toast").textContent = msg; $("toast").classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").classList.remove("show"), 3200);
+}
+function fail(msg) { $("errorMsg").textContent = msg; show("errorBox"); }
+$("retryBtn").onclick = () => { history.replaceState(null, "", "/"); show("form"); };
+$("newBtn").onclick = () => { history.replaceState(null, "", "/"); result = null; show("form"); };
 
+/* ---------- Gönder ---------- */
 $("form").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const partial = [...document.querySelectorAll(".video")].find((c) => {
+    const t = c.querySelector("input[name^=title]").value.trim(), s = c.querySelector("textarea[name^=transcript]").value.trim();
+    return (t || s) && !c.classList.contains("ready");
+  });
+  if (partial) { partial.scrollIntoView({ behavior: "smooth", block: "center" }); return toast(`Video ${partial.dataset.i}: başlık ve en az 50 kelimelik transkript gerekli.`); }
+
   $("submit").disabled = true;
   const fd = new FormData($("form"));
   try { localStorage.setItem("access_code", fd.get("access_code") || ""); } catch (e) {}
-  const r = await fetch("/api/analyze", { method: "POST", body: fd });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) { $("submit").disabled = false; return fail(data.detail || "İstek başarısız."); }
+  let r, data = {};
+  try {
+    r = await fetch("/api/analyze", { method: "POST", body: fd });
+    data = await r.json().catch(() => ({}));
+  } catch (err) { $("submit").disabled = false; return toast("Sunucuya ulaşılamadı."); }
+  if (!r.ok) { updateDock(); return toast(data.detail || "İstek başarısız."); }
   history.replaceState(null, "", "?job=" + data.job_id);
   poll(data.job_id);
 });
 
-function fail(msg) { $("errorMsg").textContent = msg; show("errorBox"); }
-
+/* ---------- İlerleme ---------- */
 async function poll(jobId) {
   show("progress");
   while (true) {
-    const r = await fetch("/api/jobs/" + jobId);
-    if (!r.ok) return fail("Analiz bulunamadı.");
-    const s = await r.json();
-    $("barFill").style.width = (s.percent || 2) + "%";
+    let s;
+    try {
+      const r = await fetch("/api/jobs/" + jobId);
+      if (r.status === 404) return fail("Analiz bulunamadı ya da süresi doldu. Lütfen yeniden başlat.");
+      s = await r.json();
+    } catch (e) { await new Promise((res) => setTimeout(res, 4000)); continue; }
+    const p = s.percent || 2;
+    $("ringVal").style.strokeDashoffset = 364.4 * (1 - p / 100);
+    $("pct").textContent = p + "%";
     $("progressMsg").textContent = s.message || "";
+    const items = [...$("phases").children];
+    items.forEach((li, i) => {
+      const next = items[i + 1] ? +items[i + 1].dataset.at : 100;
+      li.classList.toggle("done", p >= next || s.status === "done");
+      li.classList.toggle("active", p >= +li.dataset.at && p < next && s.status !== "done");
+    });
     if (s.status === "done") return loadResult(jobId);
     if (s.status === "error") return fail(s.message);
     await new Promise((res) => setTimeout(res, 3000));
   }
 }
 
-const fmt = (n) => new Intl.NumberFormat("tr-TR").format(n);
-
+/* ---------- Sonuç ---------- */
 async function loadResult(jobId) {
   result = await (await fetch("/api/jobs/" + jobId + "/result")).json();
-  const ch = result.channel;
-  $("chAvatar").src = ch.avatar_url;
-  $("chTitle").textContent = ch.title;
-  $("chStats").textContent = `${fmt(ch.subscribers)} abone · ${fmt(ch.total_views)} izlenme · ${ch.video_count} video · Üretim dili: ${ch.language}`;
-  $("videos").innerHTML = "";
-  for (const v of result.top_videos) {
-    const a = document.createElement("a");
-    a.href = v.url; a.target = "_blank"; a.rel = "noopener";
-    const img = document.createElement("img"); img.src = v.thumbnail_url; img.alt = "";
-    const t = document.createElement("div"); t.textContent = v.title;
-    const m = document.createElement("div"); m.className = "muted"; m.textContent = `${fmt(v.views)} izlenme · ${v.duration}`;
-    a.append(img, t, m); $("videos").append(a);
-  }
-  if (result.missing_transcripts.length) {
-    $("missing").textContent = "Şu videoların transkripti alınamadı, analizleri başlık/açıklama/thumbnail üzerinden yapıldı: " + result.missing_transcripts.join(" · ");
-    $("missing").classList.remove("hidden");
-  } else $("missing").classList.add("hidden");
+  $("resTitle").textContent = result.channel.title;
+  const chips = [`${result.videos.length} video analiz edildi`, `Üretim dili: ${result.channel.language}`,
+                 `${result.videos.filter((v) => v.has_thumbnail).length} thumbnail`];
+  $("resChips").replaceChildren(...chips.map((t) => Object.assign(document.createElement("span"), { className: "chip", textContent: t })));
   $("download").href = "/api/jobs/" + jobId + "/download";
   renderTab();
   show("result");
 }
 
 function renderTab() {
-  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === activeTab));
-  const html = marked.parse(result[activeTab] || "");
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === activeTab));
   const tpl = document.createElement("template");
-  tpl.innerHTML = html;
-  tpl.content.querySelectorAll("script,iframe,object,embed").forEach((n) => n.remove());
-  tpl.content.querySelectorAll("*").forEach((n) => [...n.attributes].forEach((a) => { if (a.name.startsWith("on")) n.removeAttribute(a.name); }));
+  tpl.innerHTML = marked.parse(result[activeTab] || "");
+  tpl.content.querySelectorAll("script,iframe,object,embed,style,link").forEach((n) => n.remove());
+  tpl.content.querySelectorAll("*").forEach((n) => [...n.attributes].forEach((a) => {
+    if (a.name.startsWith("on") || /^\s*javascript:/i.test(a.value)) n.removeAttribute(a.name);
+  }));
   $("tabContent").replaceChildren(tpl.content);
 }
-document.querySelectorAll(".tabs button").forEach((b) => (b.onclick = () => { activeTab = b.dataset.tab; renderTab(); }));
+document.querySelectorAll("#tabs button").forEach((b) => (b.onclick = () => { activeTab = b.dataset.tab; renderTab(); }));
 
 $("copyBtn").onclick = async () => {
-  await navigator.clipboard.writeText(result.instructions);
-  $("copyBtn").textContent = "Kopyalandı ✓";
-  setTimeout(() => ($("copyBtn").textContent = "Proje talimatını kopyala"), 2000);
+  try { await navigator.clipboard.writeText(result.instructions); toast("Proje talimatı kopyalandı ✓"); }
+  catch (e) { toast("Kopyalanamadı, metni sekmeden elle seç."); }
 };
 
 const jobParam = new URLSearchParams(location.search).get("job");

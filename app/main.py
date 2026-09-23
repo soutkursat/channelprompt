@@ -1,7 +1,10 @@
-"""Web uygulaması: kanal linki al → arka planda analiz et → sonuç ve ZIP paketi sun."""
+"""Web uygulaması: kullanıcı verilerini al → arka planda analiz et → sonuç ve ZIP paketi sun.
+
+Yüklenen transkriptler, thumbnail'lar ve sonuçlar hiçbir yere kaydedilmez; yalnızca bellekte tutulur
+ve RESULT_TTL_MINUTES sonunda silinir.
+"""
 from __future__ import annotations
 
-import json
 import re
 import threading
 import time
@@ -9,63 +12,68 @@ import traceback
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import UploadFile
 
 from . import config
-from .analyzer import AnalysisError, run_analysis
-from .youtube import YouTubeError
+from .analyzer import AnalysisError, ChannelInput, run_analysis
+from .inputs import VideoInput, parse_duration, parse_views
 
 app = FastAPI(title="Kanal Klonlayıcı")
 STATIC = Path(__file__).parent / "static"
-JOBS_DIR = config.DATA_DIR / "jobs"
-JOBS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 _lock = threading.Lock()
 _jobs: dict[str, dict] = {}
+_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_JOBS)
 
 
-def _job_dir(job_id: str) -> Path:
-    if not re.fullmatch(r"[0-9a-f]{32}", job_id):
-        raise HTTPException(404, "Geçersiz iş numarası.")
-    return JOBS_DIR / job_id
+def _image_type(data: bytes) -> str | None:
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    return None
 
 
-def _save_state(job_id: str, state: dict) -> None:
+def _cleanup() -> None:
+    cutoff = time.time() - config.RESULT_TTL_MINUTES * 60
     with _lock:
-        _jobs[job_id] = state
-    (_job_dir(job_id) / "state.json").write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+        for job_id in [j for j, s in _jobs.items() if s.get("finished_at", time.time()) < cutoff]:
+            del _jobs[job_id]
 
 
-def _load_state(job_id: str) -> dict:
+def _get_job(job_id: str) -> dict:
     with _lock:
-        if job_id in _jobs:
-            return _jobs[job_id]
-    path = _job_dir(job_id) / "state.json"
-    if not path.exists():
-        raise HTTPException(404, "Analiz bulunamadı.")
-    return json.loads(path.read_text(encoding="utf-8"))
+        job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Analiz bulunamadı ya da süresi doldu.")
+    return job
 
 
-def _worker(job_id: str, url: str, video_type: str, language: str) -> None:
-    state = _load_state(job_id)
+def _worker(job_id: str, channel: ChannelInput, videos: list[VideoInput]) -> None:
+    job = _get_job(job_id)
 
     def progress(message: str, percent: int) -> None:
-        state.update(status="running", message=message, percent=percent)
-        _save_state(job_id, state)
+        job.update(status="running", message=message, percent=percent)
 
-    try:
-        result, bundle = run_analysis(url, progress, video_type=video_type, content_language=language)
-        (_job_dir(job_id) / "result.json").write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
-        (_job_dir(job_id) / "paket.zip").write_bytes(bundle)
-        state.update(status="done", message="Analiz tamamlandı.", percent=100, channel_title=result["channel"]["title"])
-    except (YouTubeError, AnalysisError) as e:
-        state.update(status="error", message=str(e))
-    except Exception as e:  # beklenmeyen hata
-        traceback.print_exc()
-        state.update(status="error", message=f"Beklenmeyen hata: {e}")
-    state["finished_at"] = time.time()
-    _save_state(job_id, state)
+    job.update(message="Sırada bekleniyor…")
+    with _slots:
+        try:
+            result, bundle = run_analysis(channel, videos, progress)
+            job.update(status="done", message="Analiz tamamlandı.", percent=100, result=result, bundle=bundle)
+        except AnalysisError as e:
+            job.update(status="error", message=str(e))
+        except Exception as e:  # beklenmeyen hata
+            traceback.print_exc()
+            job.update(status="error", message=f"Beklenmeyen hata: {e}")
+    job["finished_at"] = time.time()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -75,58 +83,94 @@ def index() -> str:
 
 
 @app.post("/api/analyze")
-def analyze(
-    url: str = Form(...),
-    video_type: str = Form("long"),
-    language: str = Form(""),
-    access_code: str = Form(""),
-) -> JSONResponse:
-    if config.ACCESS_CODE and access_code.strip() != config.ACCESS_CODE:
+async def analyze(request: Request) -> JSONResponse:
+    _cleanup()
+    form = await request.form()
+
+    def field(name: str, limit: int = 5000) -> str:
+        value = form.get(name) or ""
+        return value.strip()[:limit] if isinstance(value, str) else ""
+
+    if config.ACCESS_CODE and field("access_code") != config.ACCESS_CODE:
         raise HTTPException(403, "Erişim kodu hatalı.")
-    if video_type not in {"long", "shorts", "all"}:
-        raise HTTPException(400, "Geçersiz video türü.")
-    if not url.strip():
-        raise HTTPException(400, "Kanal linki gerekli.")
-    job_id = uuid.uuid4().hex
-    _job_dir(job_id).mkdir(parents=True)
-    _save_state(
-        job_id,
-        {"id": job_id, "status": "queued", "message": "Sıraya alındı…", "percent": 0, "url": url.strip(),
-         "created_at": time.time()},
+
+    channel = ChannelInput(
+        url=field("channel_url", 500),
+        name=field("channel_name", 200),
+        language=field("language", 50),
+        notes=field("notes", 3000),
+        other_titles=field("other_titles", 10000),
     )
-    threading.Thread(target=_worker, args=(job_id, url.strip(), video_type, language.strip().lower()),
-                     daemon=True).start()
+
+    videos: list[VideoInput] = []
+    for i in range(1, config.MAX_VIDEOS + 1):
+        title = field(f"title_{i}", 300)
+        transcript = field(f"transcript_{i}", config.MAX_TRANSCRIPT_CHARS)
+        thumb = form.get(f"thumbnail_{i}")
+        has_thumb = isinstance(thumb, UploadFile) and thumb.filename
+        if not (title or transcript or has_thumb):
+            continue
+        if not title or not transcript:
+            raise HTTPException(400, f"Video {i}: başlık ve transkript birlikte girilmeli.")
+        thumb_bytes, thumb_type = None, "image/jpeg"
+        if has_thumb:
+            thumb_bytes = await thumb.read(config.MAX_THUMBNAIL_BYTES + 1)
+            if len(thumb_bytes) > config.MAX_THUMBNAIL_BYTES:
+                raise HTTPException(400, f"Video {i}: thumbnail 5 MB'tan büyük olamaz.")
+            thumb_type = _image_type(thumb_bytes)
+            if not thumb_type:
+                raise HTTPException(400, f"Video {i}: thumbnail JPG, PNG, WEBP veya GIF olmalı.")
+        video = VideoInput(
+            title=title,
+            transcript_raw=transcript,
+            views=parse_views(field(f"views_{i}", 30)),
+            duration_seconds=parse_duration(field(f"duration_{i}", 20)),
+            description=field(f"description_{i}", 5000),
+            thumbnail_bytes=thumb_bytes,
+            thumbnail_type=thumb_type,
+        )
+        if video.word_count < 50:
+            raise HTTPException(400, f"Video {i}: transkript çok kısa görünüyor (en az 50 kelime).")
+        videos.append(video)
+
+    if not videos:
+        raise HTTPException(400, "En az bir videonun başlığını ve transkriptini gir.")
+
+    job_id = uuid.uuid4().hex
+    with _lock:
+        _jobs[job_id] = {"status": "queued", "message": "Sıraya alındı…", "percent": 0, "created_at": time.time(),
+                         "channel_title": channel.name or channel.url or "kanal"}
+    threading.Thread(target=_worker, args=(job_id, channel, videos), daemon=True).start()
     return JSONResponse({"job_id": job_id})
 
 
 @app.get("/api/jobs/{job_id}")
 def job_status(job_id: str) -> JSONResponse:
-    return JSONResponse(_load_state(job_id))
+    job = _get_job(job_id)
+    return JSONResponse({k: job.get(k) for k in ("status", "message", "percent")})
 
 
 @app.get("/api/jobs/{job_id}/result")
-def job_result(job_id: str) -> Response:
-    path = _job_dir(job_id) / "result.json"
-    if not path.exists():
+def job_result(job_id: str) -> JSONResponse:
+    job = _get_job(job_id)
+    if job["status"] != "done":
         raise HTTPException(404, "Sonuç henüz hazır değil.")
-    return Response(path.read_text(encoding="utf-8"), media_type="application/json")
+    return JSONResponse(job["result"])
 
 
 @app.get("/api/jobs/{job_id}/download")
-def job_download(job_id: str) -> FileResponse:
-    path = _job_dir(job_id) / "paket.zip"
-    if not path.exists():
+def job_download(job_id: str) -> Response:
+    job = _get_job(job_id)
+    if job["status"] != "done":
         raise HTTPException(404, "Paket henüz hazır değil.")
-    state = _load_state(job_id)
-    name = re.sub(r"[^\w-]+", "-", state.get("channel_title", "kanal"), flags=re.UNICODE).strip("-") or "kanal"
-    return FileResponse(path, media_type="application/zip", filename=f"{name}-claude-proje-paketi.zip")
+    name = re.sub(r"[^A-Za-z0-9-]+", "-", job["channel_title"]).strip("-")[:60] or "kanal"
+    return Response(
+        job["bundle"],
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}-claude-proje-paketi.zip"'},
+    )
 
 
 @app.get("/health")
 def health() -> dict:
-    return {
-        "ok": True,
-        "youtube_key": bool(config.YOUTUBE_API_KEY),
-        "anthropic_key": bool(config.ANTHROPIC_API_KEY),
-        "model": config.CLAUDE_MODEL,
-    }
+    return {"ok": True, "anthropic_key": bool(config.ANTHROPIC_API_KEY), "model": config.CLAUDE_MODEL}

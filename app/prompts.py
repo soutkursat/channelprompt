@@ -17,31 +17,33 @@ her şeyi ortaya çıkarmak.
 
 
 def video_analysis_prompt(ctx: dict) -> str:
-    return f"""Aşağıda "{ctx['channel_title']}" kanalının en çok izlenen videolarından biri var (kanal sıralaması: #{ctx['rank']}).
-Thumbnail görseli bu mesajın başında ekli.
+    thumb_note = "Thumbnail görseli bu mesajın başında ekli." if ctx["has_thumbnail"] else \
+        "Bu video için thumbnail yüklenmedi; thumbnail analizini başlığa ve kanal tarzına göre çıkarım olarak yap."
+    ts_note = "" if ctx["timestamps"] else \
+        "\nNot: Transkript zaman damgası içermiyor. Zamanlamaları kelime sayısı ve anlatım hızından tahmin et ve tahmin olduğunu belirt."
+    first_note = " (zaman damgası olmadığı için anlatım hızına göre TAHMİN edildi)" if ctx["first_30s_estimated"] else ""
+    return f"""Aşağıda "{ctx['channel_title']}" kanalının en çok izlenen videolarından biri var (kullanıcının sıralaması: #{ctx['rank']}).
+{thumb_note}
+Veriler kullanıcı tarafından yapıştırıldı/yüklendi.{ts_note}
 
 ## Video verileri
 - Başlık: {ctx['title']}
-- URL: {ctx['url']}
-- İzlenme: {ctx['views']:,} | Beğeni: {ctx['likes']:,} | Yorum: {ctx['comments']:,}
-- Süre: {ctx['duration']} | Yayın tarihi: {ctx['published_at']}
-- Etiketler: {ctx['tags'] or '(yok)'}
+- İzlenme: {ctx['views']} | Süre: {ctx['duration']}
 - Script metrikleri (otomatik hesaplandı): {ctx['metrics']}
-- Transkript kaynağı / dili: {ctx['transcript_source'] or 'YOK'} / {ctx['transcript_language'] or '-'}
 
 ## Açıklama
 <description>
-{ctx['description'] or '(boş)'}
+{ctx['description'] or '(girilmedi)'}
 </description>
 
-## İlk 30 saniye (birebir transkript)
+## İlk 30 saniye{first_note}
 <first_30s>
-{ctx['first_30s'] or '(transkript alınamadı)'}
+{ctx['first_30s']}
 </first_30s>
 
-## Tam transkript (zaman damgalı)
+## Tam transkript
 <transcript>
-{ctx['transcript'] or '(transkript alınamadı — analizi başlık, açıklama, thumbnail ve süreye dayanarak yap ve bunu açıkça belirt)'}
+{ctx['transcript']}
 </transcript>
 
 ---
@@ -80,14 +82,14 @@ Bu videoyu aşağıdaki başlıklarla ÇOK DETAYLI analiz et:
 - Başlığın formülü (değişkenli şablon), uzunluğu, güç kelimeleri, merak boşluğu, sayı/yıl kullanımı, büyük harf kullanımı.
 - Bu başlığın neden tıklattığına dair psikolojik açıklama.
 
-### 7. Thumbnail Analizi (ekteki görsele bak)
+### 7. Thumbnail Analizi (ekli görsel varsa ona bak)
 - Kompozisyon (ana obje konumu, yerleşim ızgarası), renk paleti (baskın renkler, kontrast), yüz/obje/karakter kullanımı, duygu.
 - Thumbnail üzerindeki metin (varsa birebir yaz): kelime sayısı, font stili, renk, konum. Thumbnail metninin başlıkla ilişkisi (tekrar mı, tamamlayıcı mı?).
 - Oklar, daireler, bulanıklık, kırmızı vurgular gibi dikkat unsurları.
 - Bu thumbnail'ın AI görsel aracında yeniden üretilebilmesi için detaylı bir tasarım brifingi (İngilizce görsel prompt dahil).
 
 ### 8. SEO ve Paketleme
-- Açıklama yapısı (ilk 2 satır, zaman damgaları, linkler, hashtag), etiket stratejisi, anahtar kelime yerleşimi.
+- Açıklama girildiyse yapısı (ilk 2 satır, zaman damgaları, linkler, hashtag); başlık ve transkriptten çıkan ana ve uzun kuyruk anahtar kelimeler; önerilen etiketler.
 
 ### 9. Bu Videonun Başarı Formülü
 - Videonun bu kadar izlenmesinin en olası 5 nedeni (önem sırasına göre).
@@ -97,20 +99,17 @@ Bu videoyu aşağıdaki başlıklarla ÇOK DETAYLI analiz et:
 
 def channel_dna_prompt(ctx: dict) -> str:
     return f"""Aşağıda "{ctx['channel_title']}" kanalının tüm verileri ve en çok izlenen {ctx['top_count']} videosunun detaylı analizleri var.
-Mesajın başında kanalın en çok izlenen videolarından {ctx['thumb_count']} tanesinin thumbnail'ları, izlenme sırasına göre ekli \
-(her görselden önce hangi videoya ait olduğu yazıyor).
+Mesajın başında bu videolara ait {ctx['thumb_count']} thumbnail ekli (her görselden önce hangi videoya ait olduğu yazıyor). \
+Veriler kullanıcı tarafından yüklendi.
 
 ## Kanal bilgileri
 {ctx['channel_info']}
 
-## Yayın takvimi (son yüklemelerden hesaplandı)
-{ctx['cadence']}
-
-## En çok izlenen videolar (başlık | izlenme | süre | yayın tarihi)
+## Analiz edilen videolar
 {ctx['top_titles']}
 
-## Son yüklenen videolar (başlık | izlenme | süre | yayın tarihi)
-{ctx['recent_titles']}
+## Kanalın diğer video başlıkları (kullanıcı ekledi, başlık desenleri için)
+{ctx['other_titles']}
 
 ## En çok izlenen {ctx['top_count']} videonun detaylı analizleri
 {ctx['video_analyses']}
@@ -127,7 +126,7 @@ Claude Projesi'ne bilgi dosyası olarak yüklenecek. Bu yüzden eksiksiz, somut 
 - Kanalın içerik dili ve lehçesi.
 
 ### 2. Konu / Fikir Seçim Formülü
-- En çok izlenen konuların ortak özellikleri. Hangi konu tipleri patlıyor, hangileri zayıf kalıyor (son yüklemeler vs. en iyiler karşılaştırması).
+- En çok izlenen konuların ortak özellikleri. Hangi konu tipleri patlıyor; varsa diğer başlıklarla karşılaştır.
 - Yeni fikir üretirken kullanılacak 5-7 maddelik fikir filtresi (bir fikrin bu kanala uygun olup olmadığını test eden sorular).
 - Bu kanal için 10 örnek yeni video fikri (kanalın dilinde başlık taslağıyla).
 
@@ -159,7 +158,7 @@ Claude Projesi'ne bilgi dosyası olarak yüklenecek. Bu yüzden eksiksiz, somut 
 
 ### 7. SEO ve Yayın Stratejisi
 - Açıklama şablonu (kanalın mevcut açıklama yapısına göre), etiket stratejisi, anahtar kelime kümeleri.
-- Yayın sıklığı, gün/saat önerisi, ideal video süresi.
+- Önerilen yayın sıklığı ve ideal video süresi (faceless kanallar için en iyi uygulamalara ve analiz edilen sürelere göre).
 
 ### 8. Başarı Formülü ve Kopyalama Kuralları
 - Kanalın başarısının 7 temel sütunu.
@@ -195,7 +194,7 @@ net tanımla. Kullanıcıyla iletişim dili Türkçe; üretilen script, başlık
 {ctx['content_language']} olacak.
 
 2. **Bilgi dosyalarının kullanımı**: Her adımda hangi dosyaya bakılacağını açıkça söyle (ör. "Başlık üretmeden önce \
-KANAL_DNA_RAPORU.md içindeki Başlık Sistemi bölümünü ve BASLIK_VE_METRIK_KUTUPHANESI.md'deki en çok izlenen başlıkları incele"). \
+KANAL_DNA_RAPORU.md içindeki Başlık Sistemi bölümünü ve BASLIK_KUTUPHANESI.md'deki başarılı başlıkları incele"). \
 Thumbnail önerilerinde projeye yüklenmiş referans thumbnail görsellerini (THUMBNAIL_REFERANS.md'de hangi görselin hangi videoya ait olduğu yazıyor) dikkate almasını söyle.
 
 3. **Adım adım iş akışı** (her adımın sonunda kullanıcıdan onay/seçim beklenmeli, adımlar atlanmamalı):

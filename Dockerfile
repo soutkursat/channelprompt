@@ -3,7 +3,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
-ENV DATA_DIR=/data
-VOLUME /data
 EXPOSE 8000
+# Tek süreç: işler bellekte tutulduğu için birden fazla worker kullanmayın.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
