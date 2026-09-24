@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07070a">
+<title>Kanal Klonlayıcı</title>
+<meta name="description" content="Başarılı bir YouTube kanalının formülünü Claude Projesi talimatına dönüştür.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="aurora"><span></span><span></span><span></span></div>
+<div class="grid"></div>
+<div id="toast" class="toast glass" role="status"></div>
+
+<main>
+  <nav class="nav">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      Kanal Klonlayıcı
+    </div>
+    <div class="privacy" title="Tüm işlem tarayıcında yapılır, hiçbir veri gönderilmez"><i></i><span>Veriler cihazından çıkmaz</span></div>
+  </nav>
+
+  <!-- ================= FORM ================= -->
+  <form id="form" novalidate>
+    <header class="hero">
+      <span class="eyebrow">Faceless kanal prompt sistemi</span>
+      <h1>Başarılı kanalı çöz,<br><em>formülünü Claude'a kur.</em></h1>
+      <p class="lead">En çok izlenen 5 videonun başlığını, transkriptini ve thumbnail'ını gir. Sana Claude Projesi'ne
+        yapıştıracağın tek bir prompt verelim: Claude kanalı analiz etsin, sonra fikirden SEO'ya kadar her videonu seninle üretsin.</p>
+      <ol class="steps">
+        <li class="on"><b>1</b>Kanal</li>
+        <li class="on"><b>2</b>5 video</li>
+        <li><b>3</b>Prompt</li>
+        <li><b>4</b>Claude Projesi</li>
+      </ol>
+    </header>
+
+    <section class="glass section">
+      <div class="section-head">
+        <div>
+          <h2>Kanal bilgileri</h2>
+          <p class="hint">Formülünü çıkarmak istediğin kanalı tanıt.</p>
+        </div>
+        <span class="tag">Adım 1</span>
+      </div>
+      <div class="fields">
+        <div>
+          <label for="channel_url">Kanal linki</label>
+          <input id="channel_url" placeholder="https://www.youtube.com/@kanaladi">
+        </div>
+        <div>
+          <label for="channel_name">Kanal adı</label>
+          <input id="channel_name" placeholder="Örn. The Infographics Show">
+        </div>
+        <div class="full">
+          <label for="language">Senin kanalının içerik dili</label>
+          <select id="language">
+            <option value="">Referans kanalla aynı</option>
+            <option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>İspanyolca</option>
+            <option>Fransızca</option><option>Portekizce</option><option>Arapça</option><option>Rusça</option>
+          </select>
+        </div>
+        <div class="full">
+          <details>
+            <summary>Ek bilgiler (isteğe bağlı, promptu güçlendirir)</summary>
+            <div class="fields">
+              <div class="full">
+                <label for="other_titles">Kanalın diğer video başlıkları <small>(her satıra bir başlık)</small></label>
+                <textarea id="other_titles" style="min-height:110px" placeholder="Kanal sayfasındaki diğer popüler başlıkları buraya yapıştır. Başlık formülleri daha net çıkar."></textarea>
+              </div>
+              <div class="full">
+                <label for="notes">Notların <small>(niş, hedef kitle, dikkat çekmek istediğin noktalar)</small></label>
+                <textarea id="notes" style="min-height:90px" placeholder="Örn. Kanal tarih belgeseli yapıyor, AI görsellerle anlatım var, 20-25 dk videolar…"></textarea>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass section">
+      <div class="section-head">
+        <div>
+          <h2>En çok izlenen 5 video</h2>
+          <p class="hint">Kanalın <b>Popüler</b> sekmesindeki ilk 5 videoyu sırayla gir. Başlık ve transkript zorunlu, thumbnail önerilir.</p>
+        </div>
+        <span class="tag">Adım 2</span>
+      </div>
+      <div class="videos" id="videos"></div>
+      <div class="tip">
+        <b>Transkripti nasıl alırım?</b> YouTube'da videonun açıklamasını aç → <b>…daha fazla</b> → <b>Transkripti göster</b> →
+        metnin tamamını seçip kopyala ve yapıştır. Zaman damgalarıyla birlikte yapıştırırsan hook analizi daha isabetli olur.
+        <b>.txt, .srt</b> veya <b>.vtt</b> dosyası da yükleyebilirsin.<br>
+        <b>Thumbnail'ı nasıl alırım?</b> Video linkindeki <code>v=</code> sonrasındaki kodu al,
+        <code>https://i.ytimg.com/vi/KOD/maxresdefault.jpg</code> adresini açıp görseli kaydet.
+      </div>
+    </section>
+
+    <div class="dock glass">
+      <div class="meter"><div class="dots" id="dots"></div><span id="readyText">0/5 video hazır</span></div>
+      <button class="btn" id="submit" type="submit" disabled>
+        Promptu oluştur
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </form>
+
+  <!-- ================= SONUÇ ================= -->
+  <section id="result" class="hidden">
+    <div class="glass result-head">
+      <div>
+        <span class="eyebrow">Promptun hazır</span>
+        <h2 id="resTitle" style="margin-top:12px"></h2>
+        <div class="chips" id="resChips"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="copyBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          Promptu kopyala
+        </button>
+        <button class="btn ghost" id="downloadBtn" type="button">.md indir</button>
+        <button class="btn ghost" id="editBtn" type="button">Düzenle</button>
+      </div>
+    </div>
+
+    <div class="glass setup">
+      <h2>Claude'da kurulum</h2>
+      <ol>
+        <li><b>claude.ai → Projects → Create project</b> ile yeni proje aç.</li>
+        <li>Promptu kopyala ve projenin <b>Instructions</b> alanına yapıştır.</li>
+        <li id="thumbStep">Thumbnail görsellerini <b>aynı dosya adlarıyla</b> Project knowledge'a yükle.</li>
+        <li>Yeni sohbette <b>"Merhaba, başlayalım"</b> yaz. Claude önce kanalı analiz eder, sonra 5 fikirle başlar.</li>
+      </ol>
+    </div>
+
+    <article class="glass doc">
+      <pre id="promptOut" class="prompt-out" tabindex="0"></pre>
+    </article>
+  </section>
+
+  <footer>Tüm işlem tarayıcında yapılır. Yüklediğin transkript ve görseller hiçbir sunucuya gönderilmez.</footer>
+</main>
+
+<script src="assets/transcript.js"></script>
+<script src="assets/prompt.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,82 +1,74 @@
-# Kanal Klonlayıcı: başarılı kanal analizi → Claude Projesi paketi
+# Kanal Klonlayıcı: başarılı kanal verisi → Claude Projesi talimatı
 
-Öğrenci, analiz etmek istediği faceless YouTube kanalının en çok izlenen 5 videosunu (başlık, transkript,
-thumbnail) sisteme yükler. Sistem bunları Claude ile derinlemesine analiz eder ve öğrenciye bu kanalı
-**Claude Projects** üzerinden birebir aynı formülle kurup yönetmesini sağlayan hazır bir paket verir.
+Öğrenci, formülünü çıkarmak istediği faceless YouTube kanalının en çok izlenen 5 videosunu girer:
 
-YouTube API kullanılmaz. Tek gereken anahtar **Anthropic API anahtarıdır**.
+- başlık,
+- transkript,
+- thumbnail.
 
-## Kullanıcı ne yükler?
+Site bu verilerden tek bir **prompt** üretir. Öğrenci bu promptu Claude'da bir projenin *Instructions* alanına yapıştırır ve thumbnail'ları projeye yükler. Kanal analizini ve sonraki tüm üretimi Claude Projesi öğrencinin kendi hesabında yapar.
+
+- API anahtarı gerekmez, sunucu gerekmez.
+- Her şey tarayıcıda çalışır. Transkriptler ve görseller hiçbir yere gönderilmez.
+
+## Kullanıcı ne girer?
 
 | Alan | Zorunlu mu? |
 |---|---|
-| Kanal linki, kanal adı, içerik dili | İsteğe bağlı (referans) |
-| 5 video için **başlık** | Evet |
-| 5 video için **transkript**: yapıştırma veya `.txt` / `.srt` / `.vtt` dosyası | Evet (en az 1 video) |
-| 5 video için **thumbnail** görseli | Önerilir |
-| İzlenme, süre, video açıklaması | İsteğe bağlı |
+| Kanal linki, kanal adı, içerik dili | İsteğe bağlı |
+| 5 video için **başlık** ve **transkript** (yapıştırma veya `.txt` / `.srt` / `.vtt`) | Evet (en az 1 video) |
+| 5 video için **thumbnail** | Önerilir (prompt dosya adlarıyla eşleştirir) |
+| İzlenme, süre, açıklama | İsteğe bağlı |
 | Kanalın diğer başlıkları, notlar | İsteğe bağlı |
 
-Transkriptte zaman damgası varsa (YouTube'un "Transkripti göster" kopyası, SRT, VTT) ilk 30 saniye birebir
-çıkarılır. Zaman damgası yoksa anlatım hızına göre tahmin edilir.
+Transkriptte zaman damgası varsa ilk 30 saniye birebir çıkarılır. Zaman damgası olan kaynaklar:
 
-**Gizlilik:** Yüklenen transkriptler, görseller ve sonuçlar veritabanına ya da diske kaydedilmez. Hepsi
-yalnızca bellekte tutulur ve `RESULT_TTL_MINUTES` (varsayılan 120 dk) sonunda silinir.
+- YouTube'un "Transkripti göster" kopyası,
+- SRT,
+- VTT.
 
-## Ne üretir?
+Zaman damgası yoksa ilk 30 saniye anlatım hızına göre tahmin edilir.
 
-1. **Video analizi** (her video için, paralel): ilk 30 saniye hook anatomisi, beat sheet, açık döngüler, retention
-   araçları, anlatım tonu, kurgu çıkarımı, başlık formülü, thumbnail analizi, SEO, başarı formülü.
-2. **Kanal DNA raporu**: konsept, fikir filtresi, başlık sistemi, thumbnail sistemi ve hook formülleri, script
-   blueprint'i, kurgu ve prodüksiyon reçetesi, SEO stratejisi.
-3. **Proje talimatı**: Claude Projesi'nin *Instructions* alanına yapıştırılacak adım adım sistem promptu.
+## Üretilen prompt neleri içerir?
 
-**ZIP paketi:** `00_KURULUM_REHBERI.md`, `01_PROJE_TALIMATI.md`, `KANAL_DNA_RAPORU.md`, `VIDEO_ANALIZLERI.md`,
-`ORNEK_SCRIPTLER.md`, `BASLIK_KUTUPHANESI.md`, `THUMBNAIL_REFERANS.md` ve `thumbnails/`.
+1. **Rol ve kurallar:** Kullanıcıyla Türkçe konuşur, içeriği seçilen dilde üretir. Formül kopyalanır, cümleler kopyalanmaz.
+2. **Proje dosyaları:** Hangi thumbnail'ın hangi videoya ait olduğu.
+3. **Referans kanal verileri:** Başlıklar, izlenmeler, süreler, script metrikleri, ilk 30 saniye ve tam transkriptler.
+4. **AŞAMA 0, kanal analizi** (ilk sohbette bir kez):
+   - Video analizleri: hook anatomisi, beat sheet, retention araçları, ton, kurgu, başlık, thumbnail, SEO ve başarı formülü.
+   - Kanal DNA raporu: fikir filtresi, başlık sistemi, thumbnail sistemi, script blueprint'i, prodüksiyon reçetesi ve SEO.
+   - Kullanıcıya bu raporları projeye dosya olarak kaydetmesi söylenir.
+5. **İş akışı:**
+   - `ADIM 1` 5 fikir
+   - `ADIM 2` script
+   - `ADIM 3` 10 başlık
+   - `ADIM 4` 10 thumbnail hook
+   - `ADIM 5` kapak tasarımı
+   - `ADIM 6` SEO
+   - `ADIM 7` prodüksiyon paketi
+6. **Komutlar:** `/analiz`, `/fikir`, `/script`, `/baslik`, `/thumbnail`, `/kapak`, `/seo`, `/paket`, `/revize`.
+7. **Kalite kontrol listesi.**
 
-### Claude Projesi içindeki akış
+## Yayınlama
 
-`ADIM 0` tanıtım → `ADIM 1` konsepte özel 5 içerik fikri → `ADIM 2` script → `ADIM 3` 10 başlık →
-`ADIM 4` 10 thumbnail hook → `ADIM 5` (isteğe bağlı) kapak tasarımı ve AI görsel promptları →
-`ADIM 6` SEO açıklaması ve anahtar kelimeler → `ADIM 7` prodüksiyon paketi.
-Kısa komutlar: `/fikir`, `/script`, `/baslik`, `/thumbnail`, `/kapak`, `/seo`, `/paket`, `/revize`.
+Statik bir sitedir. Depo kökünü olduğu gibi GitHub Pages, Netlify, Vercel ya da herhangi bir statik barındırmaya yükleyin.
 
-## Kurulum
+Yerelde denemek için:
 
 ```bash
-cp .env.example .env        # ANTHROPIC_API_KEY'i gir
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+python3 -m http.server 8000   # http://localhost:8000
 ```
 
-Docker:
-
-```bash
-docker build -t kanal-klonlayici .
-docker run -p 8000:8000 --env-file .env kanal-klonlayici
-```
-
-İşler bellekte tutulduğu için uygulamayı **tek süreçle** çalıştırın (birden fazla uvicorn worker kullanmayın).
-Sunucu yeniden başlarsa devam eden analizler kaybolur.
-
-### Ortam değişkenleri
-
-| Değişken | Açıklama |
-|---|---|
-| `ANTHROPIC_API_KEY` | **Zorunlu.** https://console.anthropic.com → API Keys |
-| `ACCESS_CODE` | Öğrencilere verilecek erişim kodu. API maliyetini korumak için önerilir. |
-| `CLAUDE_MODEL` / `CLAUDE_EFFORT` | Varsayılan `claude-opus-5` / `high`. Maliyeti düşürmek için `medium`. |
-| `RESULT_TTL_MINUTES` | Sonuçların bellekte tutulma süresi (varsayılan 120). |
-| `MAX_CONCURRENT_JOBS` | Aynı anda çalışan analiz sayısı (varsayılan 3). |
-
-## Proje yapısı
+## Geliştirme
 
 ```
-app/
-  main.py       # FastAPI: form, bellek içi iş kuyruğu, sonuç ve ZIP indirme
-  inputs.py     # Transkript ayrıştırma (düz metin, YouTube kopyası, SRT, VTT) ve metrikler
-  analyzer.py   # Analiz hattı ve Claude çağrıları
-  prompts.py    # Analiz ve talimat promptları (kendi metodolojini buraya ekleyebilirsin)
-  bundle.py     # ZIP paketi
-  static/index.html
+index.html
+assets/
+  style.css        # kırmızı-siyah glassmorphism tasarım
+  transcript.js    # transkript ayrıştırma ve metrikler
+  prompt.js        # prompt şablonu (metodolojini burada düzenleyebilirsin)
+  app.js           # form etkileşimleri
+tests/prompt.test.js
 ```
+
+Testler: `node --test`
