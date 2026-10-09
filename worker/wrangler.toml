@@ -1,0 +1,14 @@
+name = "channelprompt-pro"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Ön yüzün adresi; başka sitelerin API'yi kullanmasını engeller.
+ALLOWED_ORIGINS = "https://soutkursat.github.io"
+CLAUDE_MODEL = "claude-opus-5-5"
+CLAUDE_EFFORT = "high"
+
+# Gizli değerler (wrangler secret put ile ya da GitHub Actions üzerinden):
+#   ANTHROPIC_API_KEY
+#   PRO_CODES  (virgülle ayrılmış erişim kodları)

@@ -1,4 +1,4 @@
-// Çalıştırma: node --test
+// Çalıştırma: node --test "tests/*.test.js"
 const test = require("node:test");
 const assert = require("node:assert");
 const T = require("../assets/transcript.js");
@@ -51,6 +51,23 @@ test("prompt tüm verileri ve adımları içerir", () => {
   });
   for (const s of ["# Test Kanal", "Video Bir", "Video İki", '"thumb1.jpg" → VİDEO 1', "Diğer B", "<transkript_2>",
                    'tahmini="evet"', "AŞAMA 0", "KANAL DNA RAPORU", "ADIM 1", "ADIM 6", "/seo", "İngilizce", "1.200.000"]) {
+    assert.ok(p.includes(s), "eksik: " + s);
+  }
+  assert.ok(!p.includes("undefined"));
+});
+
+test("Pro prompt blueprint'i gömer", () => {
+  const { buildPremiumPrompt } = require("../assets/premium.js");
+  const bp = require("./fixtures/blueprint.json");
+  const p = buildPremiumPrompt(bp, {
+    channelName: "Test Kanal", language: "İngilizce",
+    videos: [{ title: "What Really Happened to Titanic", transcript: "0:00 In 1912 the largest ship ever built\n0:06 and nobody knew\n0:31 but the real story " + "x ".repeat(60),
+               durationSeconds: 860, thumbnailName: "t1.jpg" }],
+  });
+  for (const s of ["# Kanal Yönetim Asistanı: Test Kanal formülü → Osmanlı tarihindeki bilinmeyen olaylar",
+                   "[Tarih + ölçek bağlamı]", "2100-2400 kelime", "| Hook | Merak ve tehdit | %3 | 70-80 |",
+                   "Lale Devri'nde Gerçekte Ne Oldu?", "#E3262F (Vurgu daire)", "Patrona Halil", '"t1.jpg" → What Really Happened',
+                   "ADIM 6", "/formul", "> In 1912 the largest ship ever built and nobody knew"]) {
     assert.ok(p.includes(s), "eksik: " + s);
   }
   assert.ok(!p.includes("undefined"));

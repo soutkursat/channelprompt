@@ -1,0 +1,107 @@
+{
+  "channel": {
+    "niche": "Tarih belgeseli",
+    "sub_niche": "Felaketlerin bilinmeyen hikâyeleri",
+    "concept_sentence": "Bu kanal meraklı yetişkinler için ünlü felaketlerin perde arkasını gerilim dolu belgesellerle anlatır.",
+    "target_audience": "25-45 yaş, tarih ve gizem meraklısı, İngilizce konuşan izleyici",
+    "viewer_emotion": "Merak ve ürpertiyle karışık hayranlık",
+    "content_pillars": ["Deniz felaketleri", "Kayıp keşifler", "Mühendislik hataları"],
+    "positioning": "Bilinen olayı bilinmeyen bir detay üzerinden yeniden anlatır.",
+    "content_language": "İngilizce"
+  },
+  "per_video": [
+    {
+      "title": "What Really Happened to Titanic",
+      "core_promise": "Titanik'in batışındaki gizli ihmali göstermek",
+      "why_it_worked": ["Bilinen olaya yeni bir açı", "İlk cümlede somut tarih ve tehdit", "Kırmızı vurgulu thumbnail"],
+      "hook_breakdown": [
+        { "quote": "In 1912 the largest ship ever built left Southampton", "function": "Bağlam + ölçek" },
+        { "quote": "and nobody on board knew what was coming", "function": "Tehdit / açık döngü" }
+      ],
+      "title_formula": "What Really Happened to [Ünlü Olay]",
+      "thumbnail_notes": "Karanlık arka plan, ortada gemi, kırmızı daire içinde buzdağı, 3 kelimelik metin"
+    }
+  ],
+  "hook": {
+    "formula": "[Tarih + ölçek bağlamı] + [kimsenin bilmediği tehdit] + [asıl hikâyenin daha önce başladığı vaadi]",
+    "second_by_second": [
+      { "range": "0-5 sn", "purpose": "Bağlam ve ölçek", "example": "In [year], the biggest [thing] ever built..." },
+      { "range": "5-15 sn", "purpose": "Tehdit ve açık döngü", "example": "...and nobody knew what was coming." },
+      { "range": "15-30 sn", "purpose": "Vaat", "example": "But the real story starts much earlier." }
+    ],
+    "word_range": "70-80 kelime",
+    "rules": ["İlk cümlede yıl geçsin", "İlk 10 saniyede tehdit kurulsun"],
+    "templates": ["In [year], [subject] did [action]. Nobody knew [threat]. But the real story starts [twist]."]
+  },
+  "script": {
+    "target_duration_minutes": "14-16",
+    "words_per_minute": "150",
+    "target_word_range": "2100-2400",
+    "narrative_skeleton": "Kronolojik gerilim + sonda ifşa",
+    "beats": [
+      { "name": "Hook", "purpose": "Merak ve tehdit", "percent": "%3", "word_range": "70-80" },
+      { "name": "Arka plan", "purpose": "Karakterler ve bağlam", "percent": "%20", "word_range": "450-500" },
+      { "name": "Tırmanış", "purpose": "Uyarı işaretleri", "percent": "%40", "word_range": "900-950" },
+      { "name": "Felaket", "purpose": "Doruk", "percent": "%25", "word_range": "550-600" },
+      { "name": "İfşa ve kapanış", "purpose": "Gizli gerçek + CTA", "percent": "%12", "word_range": "250-300" }
+    ],
+    "retention_devices": [
+      { "device": "Yeniden hook", "frequency": "Her 90 saniyede", "example": "But that wasn't the worst part." }
+    ],
+    "open_loop_pattern": "Hook'ta açılan 'asıl sebep' döngüsü son bölümde kapanır.",
+    "tone": {
+      "point_of_view": "3. şahıs belgesel anlatıcı",
+      "formality": "Yarı resmi",
+      "sentence_style": "Kısa, vurgulu cümleler (ort. 11 kelime)",
+      "signature_phrases": ["But here's the thing", "Nobody knew"],
+      "banned": ["Hey guys", "Smash that like button"]
+    },
+    "cta": { "placement": "%60 civarında tek cümle", "formula": "If you want more stories like this, [subscribe] — because [next hook]." }
+  },
+  "titles": {
+    "formulas": [
+      { "template": "What Really Happened to [Event]", "examples": ["What Really Happened to Titanic"], "why_it_works": "Bilinen olaya gizli gerçek vaadi" }
+    ],
+    "avg_length_chars": "42",
+    "power_words": ["Really", "Hidden", "Nobody"],
+    "do": ["Ünlü bir isim kullan"],
+    "dont": ["Soru işaretini abartma"]
+  },
+  "thumbnails": {
+    "visual_template": "Karanlık sinematik sahne, ortada ana obje, kırmızı vurgu",
+    "composition": "Ana obje ortada, metin sol üstte",
+    "palette": [{ "hex": "#0B0F14", "usage": "Arka plan" }, { "hex": "#E3262F", "usage": "Vurgu daire" }],
+    "text_rules": "En fazla 3 kelime, beyaz kalın font, siyah kontur",
+    "hook_formulas": [{ "template": "[KİMSE] [FİİL] [BUNU]", "example": "NOBODY SAW THIS" }],
+    "attention_devices": ["Kırmızı daire", "Ok"],
+    "ai_image_prompt_template": "Cinematic dark photo of [subject], dramatic lighting, [threat] highlighted with red circle, 16:9",
+    "canva_steps": ["Arka planı koy", "Ana objeyi kes ve ortala", "Kırmızı daireyi ekle", "Metni sol üste yaz"]
+  },
+  "production": {
+    "visual_style": "Arşiv fotoğrafı + AI sinematik görseller (çıkarım)",
+    "scene_pace": "4-6 saniyede bir sahne değişimi",
+    "voice_profile": "Derin, sakin erkek anlatıcı, 150 kelime/dk",
+    "music_sfx": "Düşük tempolu gerilim müziği, dalga sesi",
+    "workflow_steps": ["Script", "Seslendirme", "Görseller", "Kurgu", "Thumbnail", "Yükleme"],
+    "editor_brief_template": "Her [GÖRSEL] notunu bir sahne yap, 5 sn'yi geçme."
+  },
+  "seo": {
+    "description_template": "[Hook cümlesi]. In this video... [zaman damgaları] [CTA] [hashtag]",
+    "tag_strategy": "Olay adı + yıl + 'documentary' + 'untold story'",
+    "keyword_clusters": ["titanic documentary", "untold history"]
+  },
+  "idea_filter": ["Herkesin bildiği bir olay mı?", "Bilinmeyen bir detayı var mı?"],
+  "success_pillars": ["Bilinen olaya yeni açı", "Güçlü ilk 30 saniye"],
+  "never_do": ["Hook'ta cevabı vermek"],
+  "adaptation": {
+    "user_concept": "Osmanlı tarihindeki bilinmeyen olaylar",
+    "fit_assessment": "Formül güçlü taşınır; görsel arşiv daha kısıtlı.",
+    "what_transfers": ["Hook formülü", "Beat yapısı"],
+    "what_changes": ["Görsel kaynaklar", "Anahtar kelimeler"],
+    "adapted_concept_sentence": "Bu kanal Osmanlı tarihinin bilinmeyen anlarını gerilimli belgesellerle anlatır.",
+    "adapted_hook_templates": ["[Yıl], [padişah] [olay]... Kimse [tehdit] bilmiyordu."],
+    "adapted_title_formulas": [{ "template": "[Olay]'da Gerçekte Ne Oldu?", "example": "Lale Devri'nde Gerçekte Ne Oldu?" }],
+    "adapted_thumbnail_hooks": ["KİMSE BİLMİYORDU"],
+    "first_videos": [{ "title": "Patrona Halil İsyanı'nın Gizli Sebebi", "promise": "İsyanın arka planı", "hook_angle": "Bir kahvehanede başlayan son" }]
+  }
+}

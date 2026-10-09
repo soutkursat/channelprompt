@@ -49,6 +49,55 @@ Zaman damgası yoksa ilk 30 saniye anlatım hızına göre tahmin edilir.
 6. **Komutlar:** `/analiz`, `/fikir`, `/script`, `/baslik`, `/thumbnail`, `/kapak`, `/seo`, `/paket`, `/revize`.
 7. **Kalite kontrol listesi.**
 
+## Pro sürüm (AI analiz)
+
+Pro sürümde analiz Claude projesine bırakılmaz. Sunucu tarafında Claude ile önceden yapılır ve sonuçlar prompta gömülür:
+
+- hook formülü,
+- saniye saniye ilk 30 saniye yapısı,
+- yüzdeli beat sheet,
+- başlık ve thumbnail formülleri,
+- ton kuralları,
+- fikir filtresi.
+
+Kullanıcı kendi kanal konseptini de yazabilir. Formül bu konsepte uyarlanır: neyin aynen taşındığı ve neyin değiştiği ayrılır, uyarlanmış hook ve başlık şablonları ve 10 fikirlik bir havuz da prompta eklenir.
+
+```
+Tarayıcı ──(başlık, transkript, küçültülmüş thumbnail, konsept, Pro kodu)──▶ Cloudflare Worker ──▶ Claude API
+        ◀──────────── Kanal Blueprint'i (JSON) ◀──────────────────────────
+Tarayıcı: blueprint + transkriptlerden Pro promptu üretir (assets/premium.js)
+```
+
+- **Tek Claude çağrısı, yapılandırılmış çıktı:** Worker, Claude'dan JSON şemasına uyan bir blueprint ister (`worker/src/schema.ts`). Prompt metni tarayıcıda şablondan üretildiği için çıktı tokenı azdır ve sonuç her seferinde aynı düzende gelir.
+- **Erişim:** `PRO_CODES` içindeki kodlardan biri olmadan analiz yapılmaz.
+- **Gizlilik:** Veriler yalnızca analiz isteğinde Claude'a gider, hiçbir yerde saklanmaz.
+
+### Pro kurulumu (bir kez)
+
+1. **Cloudflare hesabı aç** (ücretsiz plan yeterli). *My Profile → API Tokens* altında "Edit Cloudflare Workers" şablonuyla bir token oluştur. Hesap kimliğini (Account ID) panelin sağ tarafından kopyala.
+2. GitHub'da **Settings → Secrets and variables → Actions** sayfasına şu dört gizli değeri ekle:
+
+   | Gizli değer | Açıklama |
+   |---|---|
+   | `CLOUDFLARE_API_TOKEN` | 1. adımdaki token |
+   | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare hesap kimliği |
+   | `ANTHROPIC_API_KEY` | https://console.anthropic.com → API Keys |
+   | `PRO_CODES` | Öğrencilere vereceğin kodlar, virgülle ayrılmış (ör. `KOD-AHMET-01,KOD-AYSE-02`) |
+
+3. **Actions → "Deploy Pro API" → Run workflow.** Worker yayınlanır; adresi iş akışı çıktısında görünür (ör. `https://channelprompt-pro.<hesap>.workers.dev`).
+4. Bu adresi `assets/config.js` içindeki `apiUrl` alanına yaz ve `main`'e gönder. Pro sekmesi aktifleşir.
+
+Model ve analiz derinliği `worker/wrangler.toml` içindeki `CLAUDE_MODEL` ve `CLAUDE_EFFORT` değişkenleriyle değiştirilir.
+
+### Yerel test (API'ye para harcamadan)
+
+```bash
+cd worker && npm ci
+npm run typecheck && npm test
+# Sahte bir Claude sunucusuyla uçtan uca deneme için .dev.vars dosyasına ANTHROPIC_BASE_URL=http://127.0.0.1:9999 yaz
+npx wrangler dev
+```
+
 ## Yayınlama
 
 Statik bir sitedir. Depo kökünü olduğu gibi GitHub Pages, Netlify, Vercel ya da herhangi bir statik barındırmaya yükleyin.
@@ -67,8 +116,14 @@ assets/
   style.css        # kırmızı-siyah glassmorphism tasarım
   transcript.js    # transkript ayrıştırma ve metrikler
   prompt.js        # prompt şablonu (metodolojini burada düzenleyebilirsin)
+  premium.js       # Pro prompt şablonu (Claude'un blueprint'inden)
+  config.js        # Pro API adresi
   app.js           # form etkileşimleri
-tests/prompt.test.js
+worker/            # Pro analiz API'si (Cloudflare Worker + Claude)
+  src/schema.ts    # Kanal Blueprint şeması
+  src/prompt.ts    # Claude'a giden analiz talimatı
+  src/index.ts     # /analyze uç noktası
+tests/
 ```
 
-Testler: `node --test`
+Testler: `node --test "tests/*.test.js"` (ön yüz) ve `cd worker && npm test` (Pro API)
