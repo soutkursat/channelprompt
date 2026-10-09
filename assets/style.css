@@ -251,3 +251,41 @@ details[open] > summary { margin-bottom: 14px; }
 .toast.show { transform: translate(-50%, 0); visibility: visible; }
 .hidden { display: none !important; }
 footer { text-align: center; color: var(--faint); font-size: 12.5px; margin-top: 40px; }
+
+/* ---------- Sürüm seçici (Temel / Pro) ---------- */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 22px; }
+@media (max-width: 640px) { .modes { grid-template-columns: 1fr; } }
+.mode {
+  text-align: left; cursor: pointer; padding: 18px 20px; border-radius: 18px; color: var(--muted);
+  background: linear-gradient(180deg, var(--glass-strong), var(--glass)); border: 1px solid var(--stroke);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transition: border-color .2s, box-shadow .2s, transform .15s;
+  font: 13px/1.5 var(--font);
+}
+.mode:hover { border-color: rgba(255,31,61,.4); }
+.mode b { display: flex; align-items: center; gap: 8px; font: 700 17px var(--display); color: var(--text); margin-bottom: 4px; }
+.mode.active { border-color: rgba(255,31,61,.7); box-shadow: 0 0 0 4px rgba(255,31,61,.12), 0 18px 40px -20px var(--red-glow); }
+.mode.active b { color: #fff; }
+.pro-badge {
+  font: 700 10.5px var(--font); font-style: normal; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; color: #fff;
+  background: linear-gradient(135deg, #ff3350, var(--red-2)); box-shadow: 0 0 12px var(--red-glow);
+}
+.mode.disabled { opacity: .6; }
+.pro-note { align-self: end; font-size: 12.5px; color: var(--muted); padding: 10px 14px; border-radius: 12px; background: rgba(255,31,61,.06); border: 1px solid rgba(255,31,61,.18); }
+
+/* ---------- Pro ilerleme ---------- */
+.progress-wrap { max-width: 640px; margin: 20px auto; padding: 40px 32px; text-align: center; }
+.spinner {
+  width: 64px; height: 64px; margin: 0 auto 22px; border-radius: 50%;
+  border: 4px solid rgba(255,255,255,.08); border-top-color: var(--red);
+  box-shadow: 0 0 30px -6px var(--red-glow); animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+.phases { list-style: none; padding: 0; margin: 26px 0 0; text-align: left; display: grid; gap: 10px; }
+.phases li { display: flex; gap: 12px; align-items: center; font-size: 14px; color: var(--faint); }
+.phases li i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--stroke-strong); flex-shrink: 0; display: grid; place-items: center; font-style: normal; font-size: 11px; }
+.phases li.active { color: var(--text); }
+.phases li.active i { border-color: var(--red); box-shadow: 0 0 0 4px rgba(255,31,61,.15); }
+.phases li.done { color: var(--muted); }
+.phases li.done i { background: var(--red); border-color: var(--red); color: #fff; }
+.phases li.done i::after { content: "✓"; }

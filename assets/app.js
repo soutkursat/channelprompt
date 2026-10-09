@@ -5,6 +5,8 @@
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => new Intl.NumberFormat("tr-TR").format(n);
   let promptText = "";
+  let mode = "basic";
+  const API_URL = (window.CP_CONFIG && window.CP_CONFIG.apiUrl || "").replace(/\/$/, "");
   const q = (el, f) => el.querySelector(`[data-f="${f}"]`);
   const wordsOf = (s) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
@@ -112,7 +114,7 @@
   }
 
   function show(id) {
-    for (const s of ["form", "result"]) $(s).classList.toggle("hidden", s !== id);
+    for (const s of ["form", "progress", "result"]) $(s).classList.toggle("hidden", s !== id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -144,14 +146,126 @@
       otherTitles: $("other_titles").value,
       videos,
     };
+    if (mode === "pro") return runPro(data);
     promptText = PromptBuilder.buildPrompt(data);
-    renderResult(data);
+    renderResult(data, false);
   });
 
-  function renderResult(data) {
+  /* ---------- Sürüm seçici ---------- */
+  document.querySelectorAll(".mode").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  if (!API_URL) {
+    const pro = document.querySelector('.mode[data-mode="pro"]');
+    pro.classList.add("disabled");
+    pro.querySelector("span").textContent = "Yakında: analiz edilmiş formül + konseptine uyarlama";
+  }
+  function setMode(m) {
+    if (m === "pro" && !API_URL) return toast("Pro analiz henüz aktif değil.");
+    mode = m;
+    document.querySelectorAll(".mode").forEach((b) => {
+      b.classList.toggle("active", b.dataset.mode === m);
+      b.setAttribute("aria-selected", String(b.dataset.mode === m));
+    });
+    $("proSection").classList.toggle("hidden", m !== "pro");
+    $("privacyText").textContent = m === "pro" ? "Veriler saklanmaz" : "Veriler cihazından çıkmaz";
+    $("submit").firstChild.textContent = m === "pro" ? "Pro analizi başlat " : "Promptu oluştur ";
+  }
+
+  /* ---------- Pro analiz ---------- */
+  // Thumbnail'ı en fazla 1280 px genişliğe küçültüp JPEG base64'e çevirir (daha az token, daha küçük istek).
+  async function encodeThumb(file) {
+    if (!file) return null;
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1280 / bmp.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const url = canvas.toDataURL("image/jpeg", 0.85);
+    return { media_type: "image/jpeg", data: url.slice(url.indexOf(",") + 1) };
+  }
+
+  function setPhase(pct) {
+    const items = [...$("phases").children];
+    items.forEach((li, i) => {
+      const next = items[i + 1] ? +items[i + 1].dataset.at : 101;
+      li.classList.toggle("done", pct >= next);
+      li.classList.toggle("active", pct >= +li.dataset.at && pct < next);
+    });
+  }
+
+  async function runPro(data) {
+    const code = $("pro_code").value.trim();
+    if (!code) { $("pro_code").focus(); return toast("Pro erişim kodunu gir."); }
+    try { localStorage.setItem("cp_pro_code", code); } catch (e) {}
+    $("submit").disabled = true;
+    show("progress"); setPhase(0);
+    $("progressMsg").textContent = "Videolar hazırlanıyor…";
+    try {
+      const cardsReady = cards().filter((c) => c.classList.contains("ready"));
+      const videos = await Promise.all(data.videos.map(async (v, i) => {
+        const a = Transcript.analyzeVideo({ transcript: v.transcript, durationSeconds: v.durationSeconds });
+        return {
+          title: v.title,
+          views: v.views ? fmt(v.views) : "",
+          duration: v.durationSeconds ? Transcript.formatSeconds(v.durationSeconds) : "",
+          metrics: `${a.wordCount} kelime · dakika başı ${a.wpm || "bilinmiyor"} · ${a.sentenceCount} cümle · ort. ${a.avgSentence} kelime/cümle · ${a.questionCount} soru`,
+          description: v.description,
+          first30: a.first30,
+          first30Estimated: a.first30Estimated,
+          transcript: a.body,
+          thumbnail: await encodeThumb(q(cardsReady[i], "thumb").files[0]),
+        };
+      }));
+      const body = {
+        code, concept: $("concept").value.trim(),
+        channel: { name: data.channelName, url: data.channelUrl, language: data.language, notes: data.notes, otherTitles: data.otherTitles },
+        videos,
+      };
+      $("progressMsg").textContent = "Claude kanalı analiz ediyor…";
+      const res = await fetch(API_URL + "/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Analiz başlatılamadı.");
+      }
+      const result = await readStream(res.body);
+      promptText = PremiumPrompt.buildPremiumPrompt(result.blueprint, data);
+      renderResult(data, true);
+    } catch (err) {
+      show("form");
+      toast(err.message || "Analiz başarısız oldu.");
+    } finally {
+      updateDock();
+    }
+  }
+
+  // Sunucunun NDJSON akışını okur; ilerleme satırlarını gösterir, sonucu döndürür.
+  async function readStream(stream) {
+    const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += value;
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line) continue;
+        const msg = JSON.parse(line);
+        if (msg.type === "progress") {
+          const pct = Math.min(95, Math.round((msg.elapsed / 150) * 100));
+          setPhase(pct);
+          $("progressMsg").textContent = `Claude kanalı analiz ediyor… ${msg.elapsed} sn`;
+        } else if (msg.type === "error") throw new Error(msg.error);
+        else if (msg.type === "result") return msg;
+      }
+    }
+    throw new Error("Bağlantı yarıda kesildi, tekrar dene.");
+  }
+
+  function renderResult(data, isPro) {
     $("resTitle").textContent = data.channelName || data.channelUrl || "Referans kanal";
     const thumbs = data.videos.filter((v) => v.thumbnailName).length;
     const chips = [
+      isPro ? "Pro · analiz edilmiş formül" : "Temel",
       `${data.videos.length} video`,
       `${thumbs} thumbnail`,
       `${fmt(promptText.length)} karakter`,
@@ -161,6 +275,9 @@
     $("thumbStep").innerHTML = thumbs
       ? `${thumbs} thumbnail görselini <b>aynı dosya adlarıyla</b> projenin <b>Project knowledge</b> alanına yükle.`
       : `Thumbnail yüklemedin. İstersen referans thumbnail'ları <b>Project knowledge</b> alanına ekleyebilirsin.`;
+    $("startStep").innerHTML = isPro
+      ? `Yeni sohbette <b>"Merhaba, başlayalım"</b> yaz. Formül hazır olduğu için Claude doğrudan 5 fikirle başlar.`
+      : `Yeni sohbette <b>"Merhaba, başlayalım"</b> yaz. Claude önce kanalı analiz eder, sonra 5 fikirle başlar.`;
     $("promptOut").textContent = promptText;
     show("result");
   }
@@ -184,4 +301,6 @@
   };
 
   $("editBtn").onclick = () => show("form");
+
+  try { const c = localStorage.getItem("cp_pro_code"); if (c) $("pro_code").value = c; } catch (e) {}
 })();

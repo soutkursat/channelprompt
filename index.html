@@ -22,7 +22,7 @@
       <div class="logo"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
       Kanal Klonlayıcı
     </div>
-    <div class="privacy" title="Tüm işlem tarayıcında yapılır, hiçbir veri gönderilmez"><i></i><span>Veriler cihazından çıkmaz</span></div>
+    <div class="privacy" id="privacy" title="Veriler kaydedilmez"><i></i><span id="privacyText">Veriler cihazından çıkmaz</span></div>
   </nav>
 
   <!-- ================= FORM ================= -->
@@ -39,6 +39,36 @@
         <li><b>4</b>Claude Projesi</li>
       </ol>
     </header>
+
+    <div class="modes" role="tablist" aria-label="Sürüm">
+      <button type="button" class="mode active" data-mode="basic" role="tab" aria-selected="true">
+        <b>Temel</b><span>Ücretsiz · Analizi Claude Projesi yapar</span>
+      </button>
+      <button type="button" class="mode" data-mode="pro" role="tab" aria-selected="false">
+        <b>Pro <i class="pro-badge">AI</i></b><span>Analiz edilmiş formül + senin konseptine uyarlama</span>
+      </button>
+    </div>
+
+    <section class="glass section pro-only hidden" id="proSection">
+      <div class="section-head">
+        <div>
+          <h2>Senin kanalın</h2>
+          <p class="hint">Pro analiz formülü çıkarır ve senin konseptine uyarlar. Boş bırakırsan aynı nişte yeni bir kanal için uyarlanır.</p>
+        </div>
+        <span class="tag">Pro</span>
+      </div>
+      <div class="fields">
+        <div class="full">
+          <label for="concept">Kanal konseptin <small>(isteğe bağlı)</small></label>
+          <textarea id="concept" style="min-height:100px" placeholder="Örn. Aynı gerilimli belgesel formülüyle Osmanlı tarihindeki bilinmeyen olayları anlatan Türkçe bir kanal."></textarea>
+        </div>
+        <div>
+          <label for="pro_code">Pro erişim kodu</label>
+          <input id="pro_code" type="password" autocomplete="off" placeholder="Eğitmeninden aldığın kod">
+        </div>
+        <div class="pro-note">Analiz 1-4 dakika sürer. Transkriptler ve görseller yalnızca analiz için Claude'a gönderilir, hiçbir yerde saklanmaz.</div>
+      </div>
+    </section>
 
     <section class="glass section">
       <div class="section-head">
@@ -110,6 +140,20 @@
     </div>
   </form>
 
+  <!-- ================= İLERLEME (Pro) ================= -->
+  <section id="progress" class="glass progress-wrap hidden">
+    <div class="spinner" aria-hidden="true"></div>
+    <h2>Kanal analiz ediliyor</h2>
+    <p class="hint" id="progressMsg">Videolar Claude'a gönderiliyor…</p>
+    <ul class="phases" id="phases">
+      <li data-at="0"><i></i>Hook'lar ve ilk 30 saniyeler çözülüyor</li>
+      <li data-at="25"><i></i>Script yapısı ve retention araçları çıkarılıyor</li>
+      <li data-at="60"><i></i>Başlık ve thumbnail sistemleri kuruluyor</li>
+      <li data-at="100"><i></i>Formül senin konseptine uyarlanıyor</li>
+    </ul>
+    <p class="hint" style="margin-top:22px">Sekmeyi kapatma. Bu işlem 1-4 dakika sürebilir.</p>
+  </section>
+
   <!-- ================= SONUÇ ================= -->
   <section id="result" class="hidden">
     <div class="glass result-head">
@@ -134,7 +178,7 @@
         <li><b>claude.ai → Projects → Create project</b> ile yeni proje aç.</li>
         <li>Promptu kopyala ve projenin <b>Instructions</b> alanına yapıştır.</li>
         <li id="thumbStep">Thumbnail görsellerini <b>aynı dosya adlarıyla</b> Project knowledge'a yükle.</li>
-        <li>Yeni sohbette <b>"Merhaba, başlayalım"</b> yaz. Claude önce kanalı analiz eder, sonra 5 fikirle başlar.</li>
+        <li id="startStep">Yeni sohbette <b>"Merhaba, başlayalım"</b> yaz. Claude önce kanalı analiz eder, sonra 5 fikirle başlar.</li>
       </ol>
     </div>
 
@@ -148,6 +192,8 @@
 
 <script src="assets/transcript.js"></script>
 <script src="assets/prompt.js"></script>
+<script src="assets/premium.js"></script>
+<script src="assets/config.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
